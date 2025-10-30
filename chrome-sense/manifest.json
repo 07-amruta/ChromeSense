@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "ChromeSense",
-  "description": "Privately compare products across open tabs and summarize reviews (local fallback ready; Chrome AI hooks included).",
-  "version": "0.1.0",
+  "description": "AI-powered product comparison using Chrome's built-in Gemini Nano",
+  "version": "0.2.0",
   "permissions": [
     "tabs",
     "storage",
