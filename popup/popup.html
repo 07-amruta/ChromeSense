@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>ChromeSense</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="title">ChromeSense</div>
+      <div class="subtitle">Private product comparisons across open tabs</div>
+    </header>
+
+    <div class="controls">
+      <button id="refreshBtn" class="btn">Refresh</button>
+      <button id="clearBtn" class="btn btn-ghost">Clear</button>
+      <div id="status" class="status">Idle</div>
+    </div>
+
+    <div id="content" class="content">
+      <!-- table inserted here -->
+    </div>
+
+    <footer class="footer">
+      <small>All processing happens in your browser. No external servers.</small>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
