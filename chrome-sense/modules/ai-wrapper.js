@@ -1,58 +1,35 @@
-// modules/ai-wrapper.js
+export async function summarizeReviews(reviews = [], productTitle = "") {
+  if (!reviews || !reviews.length)
+    return "No detailed reviews available for analysis.";
 
-/**
- * summarizeReviews(reviews: string[]) -> Promise<string>
- * Uses Chrome's built-in AI (Prompt API / Summarizer API) when available.
- * Falls back to a simple local summarizer if the APIs are not supported.
- */
+  const joined = reviews.join("\n\n");
+  const prompt = `
+You are an expert product analyst. 
+Summarize the following customer reviews for "${productTitle}".
+Return two clear sections:
 
-async function summarizeReviews(reviews = []) {
-  if (!reviews || !reviews.length) return 'No reviews available.';
+**Pros:** 3-5 concise bullet points listing key advantages.
+**Cons:** 3-5 concise bullet points listing main complaints or drawbacks.
 
-  const joined = reviews.join('\n\n');
-
-  // --- 1️⃣ Check if Chrome AI APIs are available ---
-  if (chrome?.ai && chrome.ai.prompt) {
-    try {
-      // Create a session if not already created
-      const session = await chrome.ai.prompt.create();
-
-      // Define your summarization prompt
-      const prompt = `
-You are an assistant that summarizes customer reviews into 3 short bullet points.
-Make them objective, concise, and helpful for a buyer.
-
+Keep sentences short and objective. Avoid repeating specs verbatim.
 Reviews:
 ${joined}
-
-Return only bullet points:
 `;
 
-      // Run the model
-      const response = await session.prompt(prompt);
-
-      // Extract the text
-      const summaryText = response?.output?.trim() || response?.text?.trim();
-      if (summaryText) return summaryText;
-
-    } catch (err) {
-      console.error('Prompt API error:', err);
-      // fallback if something fails
+  try {
+    if (chrome?.ai?.prompt) {
+      const session = await chrome.ai.prompt.create();
+      const res = await session.prompt(prompt);
+      return res?.output?.trim() || res?.text?.trim() || "[No summary]";
     }
-  } else if (chrome?.ai && chrome.ai.summarizer) {
-    try {
-      const model = await chrome.ai.summarizer.create();
-      const result = await model.summarize(joined);
-      if (result?.summary) return result.summary;
-    } catch (err) {
-      console.error('Summarizer API error:', err);
-    }
+
+    // fallback simple local summary
+    const sentences = joined.split(/[.!?]/).filter(s => s.trim());
+    const pros = sentences.slice(0, 3).map(s => "- " + s.trim());
+    const cons = sentences.slice(-3).map(s => "- " + s.trim());
+    return `**Pros:**\n${pros.join("\n")}\n\n**Cons:**\n${cons.join("\n")}`;
+  } catch (e) {
+    console.error("AI summarize failed:", e);
+    return "[summary failed]";
   }
-
-  // --- 2️⃣ Local fallback (if APIs unavailable) ---
-  const sentences = joined.split('. ').filter(Boolean);
-  const bullets = sentences.slice(0, 3).map(s => '- ' + s.trim());
-  return bullets.join('\n');
 }
-
-export { summarizeReviews };
