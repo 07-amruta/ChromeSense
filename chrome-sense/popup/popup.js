@@ -283,10 +283,12 @@ async function handleRefresh() {
     });
   });
   
+  // FIXED: Changed timeout from 3000ms to 5000ms
+  // This gives content scripts more time to extract and send data
   setTimeout(async () => {
     await loadProducts();
     refreshBtn.disabled = false;
-  }, 3000);
+  }, 5000);
 }
 
 async function handleClear() {
