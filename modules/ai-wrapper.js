@@ -2,35 +2,57 @@
 
 /**
  * summarizeReviews(reviews: string[]) -> Promise<string>
- * - Currently uses a simple heuristic fallback summarizer so the extension runs without Chrome AI.
- * - Replace the fallback block with a call to Chrome's Summarizer / Prompt API when ready.
+ * Uses Chrome's built-in AI (Prompt API / Summarizer API) when available.
+ * Falls back to a simple local summarizer if the APIs are not supported.
  */
+
 async function summarizeReviews(reviews = []) {
   if (!reviews || !reviews.length) return 'No reviews available.';
 
-  // Fallback simple summarizer: pick most common adjectives / start sentences
-  const text = reviews.join('. ').replace(/\s+/g, ' ').trim();
-  // take first 2-3 sentences as quick summary
-  const sentences = text.split('. ').filter(Boolean);
-  let result = sentences.slice(0, 3).join('. ');
-  if (!result.endsWith('.')) result += '.';
-  // create 3 bullets if possible
+  const joined = reviews.join('\n\n');
+
+  // --- 1️⃣ Check if Chrome AI APIs are available ---
+  if (chrome?.ai && chrome.ai.prompt) {
+    try {
+      // Create a session if not already created
+      const session = await chrome.ai.prompt.create();
+
+      // Define your summarization prompt
+      const prompt = `
+You are an assistant that summarizes customer reviews into 3 short bullet points.
+Make them objective, concise, and helpful for a buyer.
+
+Reviews:
+${joined}
+
+Return only bullet points:
+`;
+
+      // Run the model
+      const response = await session.prompt(prompt);
+
+      // Extract the text
+      const summaryText = response?.output?.trim() || response?.text?.trim();
+      if (summaryText) return summaryText;
+
+    } catch (err) {
+      console.error('Prompt API error:', err);
+      // fallback if something fails
+    }
+  } else if (chrome?.ai && chrome.ai.summarizer) {
+    try {
+      const model = await chrome.ai.summarizer.create();
+      const result = await model.summarize(joined);
+      if (result?.summary) return result.summary;
+    } catch (err) {
+      console.error('Summarizer API error:', err);
+    }
+  }
+
+  // --- 2️⃣ Local fallback (if APIs unavailable) ---
+  const sentences = joined.split('. ').filter(Boolean);
   const bullets = sentences.slice(0, 3).map(s => '- ' + s.trim());
   return bullets.join('\n');
 }
-
-/* ====== PLACEHOLDER: How to integrate Chrome Built-in AI (example pseudocode) ======
-   When you are ready to use Chrome's built-in Summarizer/Prompt APIs (Gemini Nano),
-   replace the fallback above with an API call. Example pseudocode:
-
-   async function summarizeReviews(reviews=[]) {
-     const joined = reviews.join('\\n\\n');
-     const response = await chrome.ai.summarize({ text: joined, options: { format: 'bullets', max_sentences: 3 }});
-     // or using Prompt API: chrome.ai.predict / chrome.ai.generate (see Chrome docs)
-     return response.summaryText || response.output || fallback;
-   }
-
-   Note: check the official Chrome extension docs for the exact chrome.ai.* method names and required permission/flags.
-================================================================================= */
 
 export { summarizeReviews };
