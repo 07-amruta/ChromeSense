@@ -96,13 +96,44 @@ button:hover {
 }
 
 .summary {
-  background: #f9fafb;
-  border-radius: 8px;
-  padding: 8px;
+  background: #f1f5f9;
+  border-left: 4px solid #2563eb;
+  border-radius: 10px;
+  padding: 10px 12px;
   font-size: 13px;
-  color: #374151;
-  margin-top: 8px;
+  color: #1e293b;
+  margin-top: 10px;
+  line-height: 1.5;
   white-space: pre-line;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.summary:hover {
+  transform: translateY(-1px);
+  background: #e2e8f0;
+}
+
+.summary strong {
+  display: block;
+  font-weight: 600;
+  color: #1d4ed8;
+  margin-bottom: 4px;
+}
+
+.summary ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.summary ul li::before {
+  content: "•";
+  color: #2563eb;
+  font-weight: bold;
+  display: inline-block;
+  width: 1em;
+  margin-left: 0;
 }
 
 a {
