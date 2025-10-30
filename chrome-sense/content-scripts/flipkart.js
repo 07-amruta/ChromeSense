@@ -1,70 +1,50 @@
 // content-scripts/flipkart.js
 (function () {
-  console.log("Flipkart content script running...");
+  console.log("Flipkart content script (safe) running...");
 
-  function getText(selector) {
-    const el = document.querySelector(selector);
-    return el ? el.innerText.trim() : "";
+  function safeQueryText(...selectors) {
+    for (const s of selectors) {
+      const el = document.querySelector(s);
+      if (el && el.innerText.trim()) return el.innerText.trim();
+    }
+    return "";
   }
 
-  function getImage() {
-    // Flipkart uses lazy-loaded img or source sets
-    const imgEl =
-      document.querySelector("img._396cs4") ||
-      document.querySelector("img.DByuf4") ||
-      document.querySelector("img._2r_T1I") ||
-      document.querySelector("img[srcset]");
-
-    if (imgEl?.src && !imgEl.src.includes("data:")) return imgEl.src;
-    if (imgEl?.getAttribute("srcset")) {
-      return imgEl.getAttribute("srcset").split(",")[0].split(" ")[0];
+  function safeQueryAttr(...selectors) {
+    for (const s of selectors) {
+      const el = document.querySelector(s);
+      if (el && el.src) return el.src;
+      if (el && el.getAttribute("srcset")) {
+        return el.getAttribute("srcset").split(",")[0].split(" ")[0];
+      }
     }
     return "";
   }
 
   function getReviews() {
-    const reviewEls = document.querySelectorAll("div.t-ZTKy div");
     const reviews = [];
-    reviewEls.forEach((el) => {
+    document.querySelectorAll("div._27M-vq div.t-ZTKy div").forEach((el) => {
       const txt = el.innerText.trim();
-      if (txt && txt.length > 30) reviews.push(txt);
+      if (txt.length > 50) reviews.push(txt);
     });
-    return reviews.slice(0, 10);
+    return reviews.slice(0, 5);
   }
-
-  function getRating() {
-    const r =
-      getText("div._3LWZlK") ||
-      getText("div._2d4LTz") ||
-      getText("._1lRcqv") ||
-      "";
-    return r ? `Rating: ${r} out of 5` : "";
-  }
-
-  function getPrice() {
-    return (
-      getText("div._30jeq3._16Jk6d") ||
-      getText("div._25b18c div") ||
-      getText("._1vC4OE") ||
-      ""
-    );
-  }
-
-  const title =
-    getText("span.B_NuCI") ||
-    getText("span.a-size-large") ||
-    document.title.split("|")[0].trim();
 
   const product = {
-    title,
-    price: getPrice(),
-    rating: getRating(),
-    image: getImage(),
+    title: safeQueryText("span.B_NuCI", "h1.yhB1nd", "h1"),
+    price: safeQueryText("div._30jeq3._16Jk6d", "div._25b18c div"),
+    rating: safeQueryText("div._3LWZlK", "div._2d4LTz", "._1lRcqv"),
+    image: safeQueryAttr("img._396cs4", "img._2r_T1I", "img[srcset]"),
     reviews: getReviews(),
     url: location.href,
     source: "flipkart",
   };
 
-  console.log("Extracted Flipkart product:", product);
+  if (!product.title) {
+    console.warn("Flipkart product not detected on this page");
+    return;
+  }
+
+  console.log("Flipkart product extracted:", product);
   chrome.runtime.sendMessage({ type: "product-info", product });
 })();
