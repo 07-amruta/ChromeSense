@@ -1,27 +1,101 @@
-# ChromeSense
+# ChromeSense - AI Product Comparison Extension
 
-ChromeSense is a privacy-first Chrome extension (MVP) that aggregates product information from open product tabs (Amazon.in and Flipkart), summarizes user reviews, and displays a side-by-side comparison — all within your browser. The included code uses a safe local summarizer fallback so it runs out-of-the-box; placeholders are included to wire in Chrome’s built-in AI (Prompt / Summarizer) later.
+> Compare products across Amazon & Flipkart with AI-powered insights
 
-## Features (MVP)
-- Detects product pages on Amazon.in and Flipkart and extracts title, price, image, rating, and top reviews.
-- Aggregates product entries from all open tabs and shows a side-by-side comparison in the popup.
-- Produces quick review summaries (fallback heuristics). Placeholder code is included to call Chrome’s built-in Summarizer/Prompt APIs (Gemini Nano).
-- All processing is local — no data is sent to external servers.
+Built for **Google Chrome AI Challenge 2025** using Chrome's built-in Gemini Nano
 
-## Quick install (developer)
-1. Clone or download this repository.
-2. Open Chrome → `chrome://extensions` → enable **Developer mode**.
-3. Click **Load unpacked** and select the repository folder (the folder containing `manifest.json`).
-4. Open product pages (Amazon.in or Flipkart) — wait ~1s for the extractor to run.
-5. Click the ChromeSense extension icon → click **Refresh** → view comparisons and summaries.
+---
 
-## Where to hook your Chrome built-in AI
-Edit `modules/ai-wrapper.js` and replace the `summarizeReviews` fallback with calls to Chrome’s Summarizer or Prompt API following the official docs. There are comments showing the exact place to integrate.
+## 🚀 Quick Installation
 
-## Notes & testing
-- If you open multiple product tabs, the popup will collect data stored in local extension storage.
-- The extension purposely includes a local fallback so judges/testers can run it without requiring special Chrome flags for AI.
-- Make sure to test with product pages on `amazon.in` and `flipkart.com`. Selectors may require tuning if the site has changed layout.
+### Option 1: With Chrome AI (Recommended)
 
-## License
-MIT. See LICENSE file.
+**1. Install Chrome Dev**
+- Download: https://www.google.com/chrome/dev/
+
+**2. Enable AI (in Chrome Dev)**
+```bash
+chrome://flags
+```
+
+Enable these 3 flags:
+- `prompt-api-for-gemini-nano` → Enabled
+- `optimization-guide-on-device-model` → Enabled BypassPerfRequirement  
+- `summarization-api-for-gemini-nano` → Enabled
+
+Click "Relaunch"
+
+**3. Download AI Model**
+```bash
+chrome://components
+```
+
+- Find "Optimization Guide On Device Model"
+- Click "Check for update"
+- Wait 5-15 mins (~1.5GB)
+
+**4. Load Extension**
+- Go to `chrome://extensions`
+- Enable "Developer mode"
+- Click "Load unpacked"
+- Select extension folder
+
+✅ Result: AI-powered summaries
+
+---
+
+### Option 2: Regular Chrome (Fallback)
+
+**1. Load Extension**
+- Go to `chrome://extensions` in any Chrome
+- Enable "Developer mode"  
+- Click "Load unpacked"
+- Select extension folder
+
+✅ Result: Keyword-based analysis
+
+---
+
+## 📖 How to Use
+
+1. Open Amazon/Flipkart product pages
+2. Click extension icon
+3. Click "Scan Tabs"
+4. View AI summaries and comparisons
+
+---
+
+## 🔍 AI vs Fallback
+
+| Feature | Chrome AI | Regular Chrome |
+|---------|-----------|----------------|
+| Analysis | Intelligent | Keyword-based |
+| Privacy | 100% local | 100% local |
+| Indicator | "AI-Powered" | "Using fallback" |
+
+---
+
+## 🛠️ Tech Stack
+
+- Chrome Prompt API (Gemini Nano)
+- Manifest V3
+- JavaScript ES6+
+- No external APIs
+
+---
+## 🎯 Hackathon Compliance
+
+✅ Uses Chrome Prompt API  
+✅ Works with/without AI  
+✅ No external dependencies  
+✅ 100% privacy-focused  
+
+---
+
+## 📄 License
+
+MIT License
+
+---
+
+**Made for Google Chrome AI Challenge 2025**
