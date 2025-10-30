@@ -1,7 +1,8 @@
 // content-scripts/flipkart.js
 (function () {
-  console.log("Flipkart content script (delayed extractor) running…");
+  console.log("Flipkart content script (safe async extractor) running…");
 
+  // Small utility helpers
   function getText(selectors) {
     for (const s of selectors) {
       const el = document.querySelector(s);
@@ -11,8 +12,7 @@
   }
 
   function getImage() {
-    const img =
-      document.querySelector("img._396cs4, img._2r_T1I, img[srcset]");
+    const img = document.querySelector("img._396cs4, img._2r_T1I, img[srcset]");
     if (!img) return "";
     if (img.src && !img.src.startsWith("data:")) return img.src;
     const set = img.getAttribute("srcset");
@@ -48,24 +48,28 @@
     };
   }
 
-  // Wait for product DOM to appear
-  const observer = new MutationObserver(() => {
+  // --- Main function (runs once DOM is truly ready) ---
+  function safeRunExtraction() {
+    // Double-check page type
+    const productCheck = document.querySelector("span.B_NuCI, h1.yhB1nd");
+    if (!productCheck) {
+      console.log("Flipkart: product info not yet available. Waiting...");
+      setTimeout(safeRunExtraction, 2000);
+      return;
+    }
+
     const product = extractProduct();
     if (product && product.title) {
-      console.log("Flipkart product extracted:", product);
+      console.log("✅ Flipkart product extracted:", product);
       chrome.runtime.sendMessage({ type: "product-info", product });
-      observer.disconnect();
+    } else {
+      console.warn("Flipkart: unable to extract product data.");
     }
+  }
+
+  // --- Ensure Flipkart's React app is fully mounted ---
+  window.addEventListener("load", () => {
+    // Delay actual scraping slightly so Flipkart JS finishes first
+    setTimeout(safeRunExtraction, 2500);
   });
-
-  observer.observe(document.body, { childList: true, subtree: true });
-
-  // fallback timeout
-  setTimeout(() => {
-    const product = extractProduct();
-    if (product && product.title) {
-      console.log("Flipkart fallback extracted:", product);
-      chrome.runtime.sendMessage({ type: "product-info", product });
-    }
-  }, 4000);
 })();
