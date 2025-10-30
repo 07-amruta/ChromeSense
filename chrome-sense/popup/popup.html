@@ -3,30 +3,28 @@
 <head>
   <meta charset="utf-8"/>
   <title>ChromeSense</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="container">
-    <header class="header">
-      <div class="title">ChromeSense</div>
-      <div class="subtitle">Private product comparisons across open tabs</div>
-    </header>
+  <header>
+    <h1>ChromeSense</h1>
+    <p>Private product comparisons across open tabs</p>
+  </header>
 
-    <div class="controls">
-      <button id="refreshBtn" class="btn">Refresh</button>
-      <button id="clearBtn" class="btn btn-ghost">Clear</button>
-      <div id="status" class="status">Idle</div>
+  <div class="buttons">
+    <div>
+      <button id="refreshBtn">Refresh</button>
+      <button id="clearBtn" style="background:#9ca3af;">Clear</button>
     </div>
-
-    <div id="content" class="content">
-      <!-- table inserted here -->
-    </div>
-
-    <footer class="footer">
-      <small>All processing happens in your browser. No external servers.</small>
-    </footer>
+    <span id="status">Idle</span>
   </div>
+
+  <div id="content"></div>
+
+  <footer style="padding:8px 12px;text-align:center;font-size:12px;color:#6b7280;">
+    All processing happens locally — no data ever leaves your browser.
+  </footer>
 
   <script type="module" src="popup.js"></script>
 </body>

@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
     products.forEach(async (p, idx) => {
       const el = document.getElementById(`summary-${idx}`);
       try {
-        const summary = await summarizeReviews(p.reviews || []);
+        const summary = await summarizeReviews(p.reviews || [], p.title);
         el.innerText = summary;
       } catch (err) {
         console.error("Summary failed:", err);
