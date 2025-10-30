@@ -1,133 +1,190 @@
 // content-scripts/flipkart.js
 (function () {
-  console.log("🟦 Flipkart extractor started…");
+  console.log("Flipkart extractor started");
 
-  async function autoScrollToLoad() {
-    let lastHeight = 0;
-    for (let i = 0; i < 10; i++) {
-      window.scrollBy(0, 600);
-      await new Promise((r) => setTimeout(r, 600));
-      const newHeight = document.body.scrollHeight;
-      if (newHeight === lastHeight) break;
-      lastHeight = newHeight;
-    }
-    window.scrollTo(0, 0);
-    await new Promise((r) => setTimeout(r, 800));
+  function wait(ms) {
+    return new Promise(function(resolve) {
+      setTimeout(resolve, ms);
+    });
   }
 
-  function extract() {
-    // Enhanced title selectors with multiple fallbacks
-    let title = null;
-    const titleSelectors = [
-      "span.B_NuCI",
-      "span.VU-ZEz",
-      "h1.yhB1nd",
-      ".B_NuCI",
-      "h1"
-    ];
+  async function scrollPage() {
+    for (let i = 0; i < 8; i++) {
+      window.scrollBy(0, 500);
+      await wait(500);
+    }
+    window.scrollTo(0, 0);
+    await wait(800);
+  }
 
-    for (let selector of titleSelectors) {
-      const el = document.querySelector(selector);
-      if (el && el.innerText && el.innerText.trim()) {
-        title = el.innerText.trim();
-        break;
+  function getTitle() {
+    const selectors = ["span.B_NuCI", "span.VU-ZEz", "h1.yhB1nd", "h1"];
+    for (let i = 0; i < selectors.length; i++) {
+      const el = document.querySelector(selectors[i]);
+      if (el && el.innerText) {
+        return el.innerText.trim();
       }
     }
+    return document.title.split("|")[0].trim();
+  }
 
-    if (!title) {
-      title = document.title.split("|")[0].split("-")[0].trim();
-    }
-
-    console.log("📌 Title found:", title);
-
+  function getPrice() {
     let price = null;
+    
+    // Primary price selectors
     const priceSelectors = [
       "div._30jeq3._16Jk6d",
-      "div._1vC4OE._3qQ9m1",
       "div._30jeq3",
-      "div._16Jk6d"
+      "div._16Jk6d",
+      "div._1vC4OE._3qQ9m1",
+      "div._25b18c div"
     ];
 
-    for (let selector of priceSelectors) {
-      const el = document.querySelector(selector);
-      if (el && el.innerText) {
+    for (let i = 0; i < priceSelectors.length; i++) {
+      const el = document.querySelector(priceSelectors[i]);
+      if (el && el.innerText && el.innerText.trim().startsWith("₹")) {
         price = el.innerText.trim();
         break;
       }
     }
 
+    // Fallback: Find any element containing price pattern
+    if (!price) {
+      const allDivs = document.querySelectorAll("div");
+      for (let div of allDivs) {
+        const text = div.innerText;
+        if (text && text.match(/^₹[\d,]+$/)) {
+          price = text.trim();
+          break;
+        }
+      }
+    }
+
+    console.log("💰 Price extracted:", price);
+    return price;
+  }
+
+  function getImage() {
     let image = null;
+    
+    // Primary image selectors for Flipkart
     const imageSelectors = [
       "img._396cs4",
-      "img._2r_T1I",
+      "img._2r_T1I", 
       "img._53J4C-",
+      "div._1AtVbE img",
       "div._3kidJX img",
-      "img[srcset]"
+      "img[class*='_396cs4']",
+      "div[class*='_1AtVbE'] img"
     ];
 
-    for (let selector of imageSelectors) {
-      const el = document.querySelector(selector);
-      if (el && el.src) {
+    for (let i = 0; i < imageSelectors.length; i++) {
+      const el = document.querySelector(imageSelectors[i]);
+      if (el && el.src && !el.src.includes("placeholder") && !el.src.includes("data:image")) {
         image = el.src;
         break;
       }
     }
 
-    let rating = null;
-    const ratingSelectors = [
-      "div._3LWZlK",
-      "div._2d4LTz",
-      "span._1lRcqv"
-    ];
+    // Fallback: Find largest product image
+    if (!image) {
+      const allImages = document.querySelectorAll("img");
+      let largestImage = null;
+      let maxSize = 0;
 
-    for (let selector of ratingSelectors) {
-      const el = document.querySelector(selector);
-      if (el && el.innerText) {
-        rating = el.innerText.trim();
-        break;
+      for (let img of allImages) {
+        if (img.src && 
+            img.src.includes("rukminim") && 
+            !img.src.includes("placeholder") &&
+            img.naturalWidth > 100 && 
+            img.naturalHeight > 100) {
+          const size = img.naturalWidth * img.naturalHeight;
+          if (size > maxSize) {
+            maxSize = size;
+            largestImage = img.src;
+          }
+        }
+      }
+      
+      if (largestImage) {
+        image = largestImage;
       }
     }
 
-    // Review extraction
-    let reviews = [];
-    const reviewSelectors = [
-      "div.t-ZTKy",
-      "div._6K-7Co",
-      "div.qwjRop",
-      "div._2-N8zT div",
-      "div.ZmyHeo div"
-    ];
+    console.log("🖼️ Image extracted:", image);
+    return image;
+  }
 
-    for (let selector of reviewSelectors) {
-      const elements = document.querySelectorAll(selector);
-      if (elements.length > 0) {
-        const tempReviews = Array.from(elements)
-          .map((el) => {
-            if (!el.innerText) return "";
-            let text = el.innerText.trim();
-            text = text.replace(/READ MORE/gi, "").trim();
-            return text;
-          })
-          .filter((txt) => {
-            return (
-              txt.length > 50 &&
-              txt.indexOf("Certified Buyer") === -1 &&
-              txt.indexOf("Helpful") === -1 &&
-              txt.indexOf("₹") !== 0
-            );
-          });
+  function getRating() {
+    const selectors = ["div._3LWZlK", "div._2d4LTz"];
+    for (let i = 0; i < selectors.length; i++) {
+      const el = document.querySelector(selectors[i]);
+      if (el && el.innerText) {
+        return el.innerText.trim();
+      }
+    }
+    return null;
+  }
 
-        if (tempReviews.length > reviews.length) {
-          reviews = tempReviews;
+  function getHighlights() {
+    const highlights = [];
+    
+    // Try to get highlights/key features
+    const highlightElements = document.querySelectorAll("li._7eSDEY, ul._1h43aV li, div._2418kt li");
+    
+    for (let i = 0; i < highlightElements.length; i++) {
+      const text = highlightElements[i].innerText;
+      if (text && text.length > 10 && text.length < 200) {
+        highlights.push(text.trim());
+      }
+    }
+
+    // Try to get product description if no highlights
+    if (highlights.length === 0) {
+      const descElements = document.querySelectorAll("div._1mXcCf, div._2418kt div, p._2-N8zT");
+      for (let i = 0; i < descElements.length; i++) {
+        const text = descElements[i].innerText;
+        if (text && text.length > 50 && text.length < 500) {
+          highlights.push(text.trim());
         }
       }
     }
 
-    reviews = reviews.slice(0, 10);
+    return highlights.slice(0, 10);
+  }
 
-    if (reviews.length === 0) {
-      console.log("⚠️ No reviews found");
-      reviews = ["No detailed reviews available for analysis."];
+  function getReviews() {
+    const reviews = [];
+    const elements = document.querySelectorAll("div.t-ZTKy, div._6K-7Co, div.qwjRop");
+    
+    for (let i = 0; i < elements.length; i++) {
+      const text = elements[i].innerText;
+      if (text && text.length > 50) {
+        const cleaned = text.replace(/READ MORE/gi, "").trim();
+        if (cleaned.indexOf("Certified Buyer") === -1 && cleaned.indexOf("Helpful") === -1) {
+          reviews.push(cleaned);
+        }
+      }
+    }
+
+    return reviews.slice(0, 10);
+  }
+
+  function extractData() {
+    const title = getTitle();
+    const price = getPrice();
+    const image = getImage();
+    const rating = getRating();
+    const reviews = getReviews();
+    const highlights = getHighlights();
+
+    // If no reviews, use product highlights as content
+    let contentForSummary = reviews;
+    if (reviews.length === 0 && highlights.length > 0) {
+      contentForSummary = highlights;
+      console.log("No reviews found, using product highlights instead");
+    } else if (reviews.length === 0) {
+      contentForSummary = ["No detailed reviews or product information available for analysis."];
     }
 
     const product = {
@@ -137,56 +194,39 @@
       price: price,
       image: image,
       rating: rating,
-      reviews: reviews,
-      reviewCount: reviews.length
+      reviews: contentForSummary,
+      reviewCount: reviews.length,
+      hasReviews: reviews.length > 0,
+      highlights: highlights
     };
 
-    console.log("📦 Flipkart extracted:", product);
-    console.log("✅ Found " + reviews.length + " reviews");
+    console.log("Flipkart data extracted:", product);
+    console.log("Image URL:", image);
 
     chrome.runtime.sendMessage(
       { type: "product-data", payload: product },
       function (response) {
         if (chrome.runtime.lastError) {
-          console.error("❌ Message send failed:", chrome.runtime.lastError);
+          console.error("Send failed:", chrome.runtime.lastError.message);
         } else {
-          console.log("✅ Message sent successfully", response);
+          console.log("Data sent successfully");
         }
       }
     );
   }
 
-  async function initExtractor() {
-    try {
-      await autoScrollToLoad();
-
-      let attempts = 0;
-      const maxAttempts = 10;
-
-      const checkReady = setInterval(function () {
-        attempts = attempts + 1;
-
-        const titleEl1 = document.querySelector("span.B_NuCI");
-        const titleEl2 = document.querySelector("span.VU-ZEz");
-        const titleEl3 = document.querySelector("h1");
-
-        if (titleEl1 || titleEl2 || titleEl3 || attempts >= maxAttempts) {
-          clearInterval(checkReady);
-          console.log("✅ Ready to extract (attempt " + attempts + ")");
-          setTimeout(extract, 1000);
-        } else {
-          console.log("⏳ Waiting for elements... (attempt " + attempts + ")");
-        }
-      }, 500);
-    } catch (e) {
-      console.error("❌ Flipkart extractor failed:", e);
-      extract();
-    }
+  async function init() {
+    console.log("Initializing Flipkart extractor...");
+    await scrollPage();
+    await wait(2500); // Increased wait time for images to load
+    extractData();
   }
 
-  if (document.readyState === "complete" || document.readyState === "interactive") {
-    setTimeout(initExtractor, 1000);
+  if (document.readyState === "complete") {
+    init();
   } else {
-    window.addEventListener("load", initExtractor);
+    window.addEventListener("load", function() {
+      setTimeout(init, 1500);
+    });
   }
 })();
