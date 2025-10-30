@@ -1,8 +1,8 @@
 // content-scripts/flipkart.js
 (function () {
-  console.log("Flipkart content script (safe) running...");
+  console.log("Flipkart content script (delayed extractor) running…");
 
-  function safeQueryText(...selectors) {
+  function getText(selectors) {
     for (const s of selectors) {
       const el = document.querySelector(s);
       if (el && el.innerText.trim()) return el.innerText.trim();
@@ -10,41 +10,62 @@
     return "";
   }
 
-  function safeQueryAttr(...selectors) {
-    for (const s of selectors) {
-      const el = document.querySelector(s);
-      if (el && el.src) return el.src;
-      if (el && el.getAttribute("srcset")) {
-        return el.getAttribute("srcset").split(",")[0].split(" ")[0];
-      }
-    }
-    return "";
+  function getImage() {
+    const img =
+      document.querySelector("img._396cs4, img._2r_T1I, img[srcset]");
+    if (!img) return "";
+    if (img.src && !img.src.startsWith("data:")) return img.src;
+    const set = img.getAttribute("srcset");
+    return set ? set.split(",")[0].split(" ")[0] : "";
   }
 
   function getReviews() {
-    const reviews = [];
-    document.querySelectorAll("div._27M-vq div.t-ZTKy div").forEach((el) => {
+    const texts = [];
+    document.querySelectorAll("div.t-ZTKy div").forEach((el) => {
       const txt = el.innerText.trim();
-      if (txt.length > 50) reviews.push(txt);
+      if (txt.length > 40) texts.push(txt);
     });
-    return reviews.slice(0, 5);
+    return texts.slice(0, 6);
   }
 
-  const product = {
-    title: safeQueryText("span.B_NuCI", "h1.yhB1nd", "h1"),
-    price: safeQueryText("div._30jeq3._16Jk6d", "div._25b18c div"),
-    rating: safeQueryText("div._3LWZlK", "div._2d4LTz", "._1lRcqv"),
-    image: safeQueryAttr("img._396cs4", "img._2r_T1I", "img[srcset]"),
-    reviews: getReviews(),
-    url: location.href,
-    source: "flipkart",
-  };
+  function extractProduct() {
+    const title = getText(["span.B_NuCI", "h1.yhB1nd", "h1"]);
+    if (!title) return null;
 
-  if (!product.title) {
-    console.warn("Flipkart product not detected on this page");
-    return;
+    const price = getText(["div._30jeq3._16Jk6d", "div._25b18c div"]);
+    const rating = getText(["div._3LWZlK", "div._2d4LTz"]);
+    const image = getImage();
+    const reviews = getReviews();
+
+    return {
+      title,
+      price,
+      rating: rating ? `Rating: ${rating} / 5` : "",
+      image,
+      reviews,
+      url: location.href,
+      source: "flipkart",
+    };
   }
 
-  console.log("Flipkart product extracted:", product);
-  chrome.runtime.sendMessage({ type: "product-info", product });
+  // Wait for product DOM to appear
+  const observer = new MutationObserver(() => {
+    const product = extractProduct();
+    if (product && product.title) {
+      console.log("Flipkart product extracted:", product);
+      chrome.runtime.sendMessage({ type: "product-info", product });
+      observer.disconnect();
+    }
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // fallback timeout
+  setTimeout(() => {
+    const product = extractProduct();
+    if (product && product.title) {
+      console.log("Flipkart fallback extracted:", product);
+      chrome.runtime.sendMessage({ type: "product-info", product });
+    }
+  }, 4000);
 })();
