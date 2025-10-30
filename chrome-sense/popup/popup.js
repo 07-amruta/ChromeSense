@@ -1,213 +1,325 @@
 // popup.js
-import { summarizeReviews } from "../modules/ai-wrapper.js";
+import { summarizeReviews, generateComparison, checkAIAvailability } from "../modules/ai-wrapper.js";
 import { parsePrice } from "../modules/helpers.js";
 
-// ---------- SMART COMPARE: AI-powered product comparison ----------
-async function generateSmartCompare(products) {
-  if (!products || products.length < 2) return "";
+// ==================== GLOBAL STATE ====================
+let currentProducts = [];
 
-  const context = products
-    .map(
-      (p, i) =>
-        `Product ${i + 1}: ${p.title}\nPrice: ${p.price}\nRating: ${p.rating}\nTop Reviews:\n${(p.reviews || [])
-          .slice(0, 3)
-          .join("\n")}`
-    )
-    .join("\n\n");
+// ==================== DOM ELEMENTS ====================
+const grid = document.getElementById("grid");
+const emptyState = document.getElementById("emptyState");
+const smartCompareSection = document.getElementById("smartCompareSection");
+const smartCompareContent = document.getElementById("smartCompareContent");
+const compareSpinner = document.getElementById("compareSpinner");
+const refreshBtn = document.getElementById("refreshBtn");
+const clearBtn = document.getElementById("clearBtn");
+const status = document.getElementById("status");
 
-  const prompt = `
-Compare the following products and write a concise insight panel.
-Use 2–3 sentences summarizing key trade-offs, followed by a single clear recommendation line.
-Tone: helpful, neutral, consumer-friendly.
-
-${context}
-`;
-
-  try {
-    if (chrome?.ai?.prompt) {
-      const session = await chrome.ai.prompt.create();
-      const res = await session.prompt(prompt);
-      return res?.output?.trim() || res?.text?.trim() || "";
+// ==================== INIT ====================
+document.addEventListener("DOMContentLoaded", async () => {
+  // Check Chrome AI availability
+  console.log("🔍 Checking Chrome AI availability...");
+  console.log("window.ai:", window.ai);
+  
+  if (window.ai && window.ai.languageModel) {
+    try {
+      const capabilities = await window.ai.languageModel.capabilities();
+      console.log("✅ Chrome AI capabilities:", capabilities);
+    } catch (error) {
+      console.error("❌ Chrome AI check failed:", error);
+      console.warn("⚠️ Chrome AI not available. Using fallback summarization.");
     }
-    return ""; // fallback if AI not available
-  } catch (e) {
-    console.error("Smart compare failed", e);
-    return "";
+  } else {
+    console.warn("⚠️ Chrome AI not available. Make sure you're using Chrome Dev/Canary with AI enabled.");
+  }
+  
+  await loadProducts();
+  
+  // Event listeners
+  refreshBtn.addEventListener("click", handleRefresh);
+  clearBtn.addEventListener("click", handleClear);
+});
+
+// ==================== LOAD PRODUCTS ====================
+async function loadProducts() {
+  updateStatus("Loading products...", "loading");
+  
+  chrome.runtime.sendMessage({ type: "get-all-products" }, async (response) => {
+    currentProducts = response?.products || [];
+    
+    if (currentProducts.length === 0) {
+      showEmptyState();
+      updateStatus("No products found", "ready");
+    } else {
+      hideEmptyState();
+      renderProducts(currentProducts);
+      
+      // Generate AI comparison if 2+ products
+      if (currentProducts.length >= 2) {
+        await generateSmartComparison(currentProducts);
+      } else {
+        smartCompareSection.style.display = "none";
+      }
+      
+      updateStatus(`${currentProducts.length} products loaded`, "ready");
+    }
+  });
+}
+
+// ==================== RENDER PRODUCTS ====================
+function renderProducts(products) {
+  grid.innerHTML = "";
+  
+  products.forEach((product, index) => {
+    const card = createProductCard(product, index);
+    grid.appendChild(card);
+  });
+}
+
+// ==================== CREATE PRODUCT CARD ====================
+function createProductCard(product, index) {
+  const card = document.createElement("div");
+  card.className = "product-card";
+  card.style.animationDelay = `${index * 0.1}s`;
+  
+  const site = product.site || "unknown";
+  const siteClass = site === "amazon" ? "amazon" : "flipkart";
+  const siteName = site === "amazon" ? "Amazon" : "Flipkart";
+  
+  card.innerHTML = `
+    <div class="product-card-header">
+      ${product.image ? `<img src="${product.image}" alt="${product.title}" class="product-image">` : ""}
+      <span class="site-badge-card ${siteClass}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="12" r="10"/>
+        </svg>
+        ${siteName}
+      </span>
+    </div>
+    
+    <div class="product-card-body">
+      <h3 class="product-title" title="${product.title}">${product.title}</h3>
+      
+      <div class="product-meta">
+        ${product.price ? `<div class="product-price">${product.price}</div>` : '<div class="product-price">N/A</div>'}
+        ${product.rating ? `
+          <div class="product-rating">
+            <svg width="14" height="14" viewBox="0 0 24 24">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            ${product.rating}
+          </div>
+        ` : ""}
+      </div>
+      
+      <div class="ai-summary" id="summary-${index}">
+        <div class="ai-summary-header">
+          <svg width="16" height="16" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+          AI Analysis
+          <div class="loading-spinner" style="margin-left: auto;"></div>
+        </div>
+        <div class="summary-content">
+          <div class="summary-loading">
+            Analyzing reviews with Gemini Nano...
+          </div>
+        </div>
+      </div>
+      
+      <div class="card-actions">
+        <button class="btn-visit" onclick="window.open('${product.url}', '_blank')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
+          </svg>
+          Visit Product
+        </button>
+        <button class="btn-remove" data-index="${index}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+          Remove
+        </button>
+      </div>
+    </div>
+  `;
+  
+  // Generate AI summary
+  setTimeout(() => generateSummary(product, index), 500 + index * 300);
+  
+  // Remove button handler
+  card.querySelector(".btn-remove").addEventListener("click", () => {
+    handleRemoveProduct(index);
+  });
+  
+  return card;
+}
+
+// ==================== GENERATE AI SUMMARY ====================
+async function generateSummary(product, index) {
+  const summaryContainer = document.getElementById(`summary-${index}`);
+  if (!summaryContainer) return;
+  
+  const contentDiv = summaryContainer.querySelector(".summary-content");
+  
+  try {
+    const summary = await summarizeReviews(product.reviews || [], product.title);
+    
+    // Parse pros and cons
+    const parsed = parseSummary(summary);
+    
+    contentDiv.innerHTML = `
+      ${parsed.pros ? `
+        <div class="summary-section pros">
+          <strong>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+            </svg>
+            Pros
+          </strong>
+          <ul>${parsed.pros.map(item => `<li>${item}</li>`).join("")}</ul>
+        </div>
+      ` : ""}
+      
+      ${parsed.cons ? `
+        <div class="summary-section cons">
+          <strong>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+            </svg>
+            Cons
+          </strong>
+          <ul>${parsed.cons.map(item => `<li>${item}</li>`).join("")}</ul>
+        </div>
+      ` : ""}
+      
+      ${!parsed.pros && !parsed.cons ? `<p style="color: var(--text-muted);">${summary}</p>` : ""}
+    `;
+    
+    // Hide spinner
+    summaryContainer.querySelector(".loading-spinner").style.display = "none";
+    
+  } catch (error) {
+    console.error("Summary generation failed:", error);
+    contentDiv.innerHTML = `<p style="color: var(--text-muted);">Unable to generate AI summary.</p>`;
+    summaryContainer.querySelector(".loading-spinner").style.display = "none";
   }
 }
 
-// ---------- MAIN UI LOGIC ----------
-document.addEventListener("DOMContentLoaded", () => {
-  const refreshBtn = document.getElementById("refreshBtn");
-  const clearBtn = document.getElementById("clearBtn");
-  const statusEl = document.getElementById("status");
-  const contentEl = document.getElementById("content");
-
-  refreshBtn.addEventListener("click", scanAndRender);
-  clearBtn.addEventListener("click", clearProducts);
-
-  // Automatically scan open tabs when popup opens
-  scanAndRender();
-
-  // ---------------- Core UI helpers ----------------
-  function setStatus(text) {
-    statusEl.innerText = text;
+// ==================== PARSE SUMMARY ====================
+function parseSummary(summary) {
+  const result = { pros: null, cons: null };
+  
+  // Split by Pros/Cons headers
+  const prosMatch = summary.match(/\*\*Pros:\*\*\s*([\s\S]*?)(?=\*\*Cons:\*\*|$)/i);
+  const consMatch = summary.match(/\*\*Cons:\*\*\s*([\s\S]*?)$/i);
+  
+  if (prosMatch) {
+    result.pros = prosMatch[1]
+      .split(/[-•]\s+/)
+      .map(item => item.trim())
+      .filter(item => item.length > 10 && item.length < 200);
   }
-
-  function renderNoProducts(text) {
-    contentEl.innerHTML = `<div style="padding:18px;color:#6b7280">${text}</div>`;
+  
+  if (consMatch) {
+    result.cons = consMatch[1]
+      .split(/[-•]\s+/)
+      .map(item => item.trim())
+      .filter(item => item.length > 10 && item.length < 200);
   }
+  
+  return result;
+}
 
-  function clearProducts() {
-    setStatus("Clearing cache...");
-    chrome.runtime.sendMessage({ type: "clear-products" }, () => {
-      setStatus("Cleared.");
-      renderNoProducts(
-        "No products found. Open product pages (Amazon/Flipkart) and re-open this popup."
-      );
-    });
-  }
-
-  // ---------------- Product rendering ----------------
-  async function renderTable(products) {
-    if (!products || !products.length) {
-      renderNoProducts(
-        "No products found. Open product pages (Amazon/Flipkart) and re-open this popup."
-      );
-      return;
+// ==================== SMART COMPARISON ====================
+async function generateSmartComparison(products) {
+  if (products.length < 2) return;
+  
+  smartCompareSection.style.display = "block";
+  compareSpinner.style.display = "block";
+  smartCompareContent.classList.add("loading");
+  smartCompareContent.innerHTML = "Analyzing products...";
+  
+  try {
+    const comparison = await generateComparison(products);
+    
+    // Check if comparison is HTML or plain text
+    if (comparison.includes("<div")) {
+      smartCompareContent.innerHTML = comparison;
+    } else {
+      // Plain text - format it nicely
+      smartCompareContent.innerHTML = `
+        <div style="padding: 16px;">
+          <p style="white-space: pre-wrap; line-height: 1.8;">${comparison}</p>
+        </div>
+      `;
     }
+    
+    smartCompareContent.classList.remove("loading");
+  } catch (error) {
+    console.error("Comparison failed:", error);
+    smartCompareContent.innerHTML = `
+      <div style="padding: 16px; color: var(--text-muted);">
+        <p>Unable to generate comparison. Please try again.</p>
+      </div>
+    `;
+    smartCompareContent.classList.remove("loading");
+  } finally {
+    compareSpinner.style.display = "none";
+  }
+}
 
-    contentEl.innerHTML = "";
-
-    // --- Smart Compare Section ---
-    if (products.length >= 2) {
-      const compareBox = document.createElement("div");
-      compareBox.className = "smart-compare";
-      compareBox.innerText = "Analyzing product comparison...";
-      contentEl.appendChild(compareBox);
-
-      const summary = await generateSmartCompare(products);
-      if (summary) {
-        compareBox.innerHTML = `<strong>Smart Compare:</strong><br>${summary}`;
-      } else {
-        compareBox.style.display = "none";
-      }
-    }
-
-    // --- Product Cards Grid ---
-    const grid = document.createElement("div");
-    grid.className = "grid";
-
-    products.forEach((p, idx) => {
-      const card = document.createElement("div");
-      card.className = "card";
-
-      // product image
-      const img = document.createElement("img");
-      img.src = p.image || "";
-      img.alt = p.title || "";
-      card.appendChild(img);
-
-      // product title
-      const title = document.createElement("h4");
-      title.innerText = p.title || "(No title)";
-      card.appendChild(title);
-
-      // price
-      const price = document.createElement("div");
-      price.className = "price";
-      price.innerText = p.price || "—";
-      card.appendChild(price);
-
-      // rating
-      const rating = document.createElement("div");
-      rating.className = "rating";
-      rating.innerText = p.rating ? `Rating: ${p.rating}` : "";
-      card.appendChild(rating);
-
-      // summary placeholder
-      const summary = document.createElement("div");
-      summary.className = "summary";
-      summary.id = `summary-${idx}`;
-      summary.innerText = "[summarizing reviews…]";
-      card.appendChild(summary);
-
-      // link
-      const link = document.createElement("a");
-      link.href = p.url;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.innerText = "Open product";
-      link.style.fontSize = "12px";
-      link.style.marginTop = "8px";
-      card.appendChild(link);
-
-      grid.appendChild(card);
-    });
-
-    contentEl.appendChild(grid);
-
-    // summarize each product
-    products.forEach(async (p, idx) => {
-      const el = document.getElementById(`summary-${idx}`);
-      try {
-        const summary = await summarizeReviews(p.reviews || [], p.title);
-        const html =
-          (summary || "")
-            .replace(/\*\*Pros:\*\*/g, "<strong>Pros:</strong><ul>")
-            .replace(/\*\*Cons:\*\*/g, "</ul><strong>Cons:</strong><ul>")
-            .replace(/- /g, "<li>") + "</ul>";
-        el.innerHTML =
-          html === "<ul></ul>"
-            ? "No detailed reviews available for analysis."
-            : html;
-      } catch (err) {
-        console.error("Summary failed:", err);
-        el.innerText = "[summary failed]";
+// ==================== EVENT HANDLERS ====================
+async function handleRefresh() {
+  updateStatus("Scanning tabs...", "loading");
+  refreshBtn.disabled = true;
+  
+  // Trigger content scripts
+  chrome.tabs.query({}, (tabs) => {
+    tabs.forEach((tab) => {
+      if (tab.url && (tab.url.includes("amazon.in") || tab.url.includes("flipkart.com"))) {
+        chrome.tabs.reload(tab.id);
       }
     });
-  }
+  });
+  
+  setTimeout(async () => {
+    await loadProducts();
+    refreshBtn.disabled = false;
+  }, 3000);
+}
 
-  // ---------------- Sorting ----------------
-  function relativeSort(products) {
-    const withPrice = products.filter((p) => parsePrice(p.price) !== null);
-    const without = products.filter((p) => parsePrice(p.price) === null);
-    withPrice.sort(
-      (a, b) => (parsePrice(a.price) || 1e12) - (parsePrice(b.price) || 1e12)
-    );
-    return withPrice.concat(without);
-  }
+async function handleClear() {
+  if (!confirm("Clear all products?")) return;
+  
+  chrome.runtime.sendMessage({ type: "clear-all" }, async () => {
+    currentProducts = [];
+    smartCompareSection.style.display = "none";
+    showEmptyState();
+    updateStatus("All products cleared", "ready");
+  });
+}
 
-  // ---------------- Scan + Render Flow ----------------
-  function scanAndRender() {
-    setStatus("Scanning open tabs...");
-    chrome.runtime.sendMessage({ type: "scan-tabs" }, async (resp) => {
-      const products = resp?.products || [];
-      if (!products.length) {
-        // fallback to cached
-        chrome.runtime.sendMessage({ type: "get-all-products" }, (r2) => {
-          const fallback = r2?.products || [];
-          processAndRender(fallback);
-        });
-        return;
-      }
-      processAndRender(products);
-    });
-  }
+function handleRemoveProduct(index) {
+  const product = currentProducts[index];
+  chrome.runtime.sendMessage({ type: "remove-product", payload: { url: product.url } }, async () => {
+    await loadProducts();
+  });
+}
 
-  function processAndRender(products) {
-    const normalized = products.map((p) => ({
-      ...p,
-      priceValue: parsePrice(p.price),
-      shortTitle: p.title
-        ? p.title.length > 80
-          ? p.title.slice(0, 80) + "…"
-          : p.title
-        : "",
-    }));
+// ==================== UI HELPERS ====================
+function showEmptyState() {
+  grid.style.display = "none";
+  emptyState.style.display = "block";
+  smartCompareSection.style.display = "none";
+}
 
-    const sorted = relativeSort(normalized);
-    renderTable(sorted);
-    setStatus(`${sorted.length} product(s) found`);
-  }
-});
+function hideEmptyState() {
+  grid.style.display = "grid";
+  emptyState.style.display = "none";
+}
+
+function updateStatus(message, type = "ready") {
+  status.querySelector("span").textContent = message;
+  status.className = `status-indicator ${type}`;
+}

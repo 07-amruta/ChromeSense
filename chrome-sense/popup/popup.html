@@ -1,31 +1,106 @@
-<!doctype html>
-<html>
+<!-- cSpell:ignore Glassmorphism -->
+
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <title>ChromeSense</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChromeSense - AI Product Comparison</title>
   <link rel="stylesheet" href="popup.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+  <!-- Modern Header with Glassmorphism -->
   <header>
-    <h1>ChromeSense</h1>
-    <p>Private product comparisons across open tabs</p>
+    <div class="header-content">
+      <div class="header-left">
+        <svg class="logo-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/>
+        </svg>
+        <div>
+          <h1>ChromeSense</h1>
+          <p>AI-Powered Product Intelligence</p>
+        </div>
+      </div>
+      <div class="ai-badge" title="Powered by Chrome's built-in Gemini Nano">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+        </svg>
+        <span>Gemini Nano</span>
+      </div>
+    </div>
   </header>
 
-  <div class="buttons">
-    <div>
-      <button id="refreshBtn">Refresh</button>
-      <button id="clearBtn" style="background:#9ca3af;">Clear</button>
+  <!-- Action Bar -->
+  <div class="action-bar">
+    <button id="refreshBtn" class="btn-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+      </svg>
+      Scan Tabs
+    </button>
+    <button id="clearBtn" class="btn-secondary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      </svg>
+      Clear All
+    </button>
+    <div id="status" class="status-indicator">
+      <div class="pulse-dot"></div>
+      <span>Ready to scan</span>
     </div>
-    <span id="status">Idle</span>
   </div>
 
-  <div id="content"></div>
+  <!-- Smart Compare Section (AI Insights) -->
+  <div id="smartCompareSection" class="smart-compare-section" style="display: none;">
+    <div class="smart-compare-header">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+      </svg>
+      <h3>AI Smart Comparison</h3>
+      <div class="loading-spinner" id="compareSpinner" style="display: none;"></div>
+    </div>
+    <div id="smartCompareContent" class="smart-compare-content">
+      <!-- AI comparison will be inserted here -->
+    </div>
+  </div>
 
-  <footer style="padding:8px 12px;text-align:center;font-size:12px;color:#6b7280;">
-    All processing happens locally — no data ever leaves your browser.
-  </footer>
+  <!-- Product Grid -->
+  <div id="grid" class="product-grid">
+    <!-- Product cards will be dynamically inserted here -->
+  </div>
 
-  <script type="module" src="popup.js"></script>
+  <!-- Empty State -->
+  <div id="emptyState" class="empty-state">
+    <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+      <polyline points="7.5 4.21 12 6.81 16.5 4.21"/>
+      <polyline points="7.5 19.79 7.5 14.6 3 12"/>
+      <polyline points="21 12 16.5 14.6 16.5 19.79"/>
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+      <line x1="12" y1="22.08" x2="12" y2="12"/>
+    </svg>
+    <h2>No Products Found</h2>
+    <p>Open Amazon or Flipkart product pages in your tabs, then click "Scan Tabs" to analyze them with AI.</p>
+    <div class="supported-sites">
+      <span class="site-badge">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M.045 18.02c.072-.116.187-.124.348-.022 3.636 2.11 7.594 3.166 11.87 3.166 2.852 0 5.668-.533 8.447-1.595l.315-.14c.138-.06.234-.1.293-.13.226-.088.39-.046.525.13.12.174.09.336-.12.48-.256.19-.6.41-1.006.654-1.244.743-2.64 1.316-4.185 1.726-1.547.41-3.03.615-4.456.615-5.12 0-9.345-1.815-12.667-5.433-.267-.293-.333-.525-.202-.697zm23.926-1.738c-.315-.028-.622-.044-.923-.044-1.83 0-3.39.557-4.684 1.673-1.293 1.115-1.94 2.43-1.94 3.94 0 .168.028.346.087.535.113.354.255.64.428.86.315.343.675.515 1.083.515.287 0 .602-.118.942-.35.342-.234.678-.66 1.01-1.278.33-.62.495-1.205.495-1.755 0-.256-.044-.47-.13-.64-.087-.172-.212-.257-.376-.257-.228 0-.417.152-.57.458-.152.304-.228.578-.228.818 0 .228.044.422.13.583.088.16.21.24.364.24.228 0 .44-.157.636-.47.195-.315.293-.667.293-1.058 0-.513-.173-.94-.52-1.278-.347-.34-.79-.51-1.33-.51-.636 0-1.196.265-1.68.798-.486.532-.728 1.192-.728 1.98 0 .858.26 1.578.783 2.163.52.584 1.16.877 1.92.877.673 0 1.297-.26 1.873-.783.575-.52.863-1.14.863-1.855 0-.658-.218-1.195-.654-1.61-.436-.417-.998-.625-1.684-.625-.785 0-1.473.24-2.063.72-.59.48-.885 1.072-.885 1.777 0 .446.13.83.39 1.15.26.32.595.48 1.006.48.297 0 .57-.087.818-.262.25-.174.374-.39.374-.644 0-.168-.06-.31-.18-.424-.12-.116-.27-.174-.45-.174-.212 0-.39.076-.534.228-.145.15-.217.333-.217.547 0 .138.033.26.098.364.066.103.158.155.277.155.226 0 .407-.12.543-.358.136-.24.204-.513.204-.82 0-.452-.152-.83-.457-1.136-.304-.305-.688-.458-1.15-.458z"/>
+        </svg>
+        Amazon
+      </span>
+      <span class="site-badge">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3.833 4.583A2.917 2.917 0 0 1 6.75 1.667h10.5a2.917 2.917 0 0 1 2.917 2.916v14.834a2.917 2.917 0 0 1-2.917 2.916H6.75a2.917 2.917 0 0 1-2.917-2.916V4.583zm8.75 11.084l5.834-5.834-1.034-1.033-4.8 4.8-2.216-2.217-1.034 1.034 3.25 3.25z"/>
+        </svg>
+        Flipkart
+      </span>
+    </div>
+  </div>
+
+  <script src="../modules/ai-wrapper.js" type="module"></script>
+  <script src="../modules/helpers.js" type="module"></script>
+  <script src="popup.js" type="module"></script>
 </body>
 </html>
