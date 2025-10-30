@@ -75,6 +75,29 @@ chrome://components
 
 ---
 
+## ⚠️ Gemini Nano Availability
+
+Chrome's built-in AI is in **limited rollout**. If you don't have access:
+- Extension works with **keyword-based analysis**
+- All features remain fully functional
+- Summaries still provide valuable insights
+- Compare and recommend features work perfectly
+
+**Check AI Status:**
+- Open DevTools Console (F12) and run:
+
+```bash
+(async () => {
+const caps = await self.ai.languageModel.capabilities();
+console.log("AI Status:", caps.available);
+})();
+```
+
+- If `"readily"` → AI is active ✅
+- If `"no"` or `"after-download"` → Using fallback ✅
+
+---
+
 ## 🛠️ Tech Stack
 
 - Chrome Prompt API (Gemini Nano)
