@@ -101,8 +101,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const el = document.getElementById(`summary-${idx}`);
       try {
         const summary = await summarizeReviews(p.reviews || [], p.title);
-        el.innerText = summary;
-      } catch (err) {
+        el.innerHTML = summary
+          .replace(/\*\*Pros:\*\*/g, "<strong>Pros:</strong><ul>")
+          .replace(/\*\*Cons:\*\*/g, "</ul><strong>Cons:</strong><ul>")
+          .replace(/- /g, "<li>")
+          + "</ul>";
+        } catch (err) {
         console.error("Summary failed:", err);
         el.innerText = "[summary failed]";
       }
