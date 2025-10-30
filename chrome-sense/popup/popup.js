@@ -1,7 +1,40 @@
 // popup.js
 import { summarizeReviews } from "../modules/ai-wrapper.js";
-import { parsePrice, similarTitle } from "../modules/helpers.js";
+import { parsePrice } from "../modules/helpers.js";
 
+// ---------- SMART COMPARE: AI-powered product comparison ----------
+async function generateSmartCompare(products) {
+  if (!products || products.length < 2) return "";
+
+  const context = products
+    .map(
+      (p, i) =>
+        `Product ${i + 1}: ${p.title}\nPrice: ${p.price}\nRating: ${p.rating}\nTop Reviews:\n${(p.reviews || []).slice(0, 3).join("\n")}`
+    )
+    .join("\n\n");
+
+  const prompt = `
+Compare the following products and write a concise insight panel.
+Use 2–3 sentences summarizing key trade-offs, followed by a single clear recommendation line.
+Tone: helpful, neutral, consumer-friendly.
+
+${context}
+`;
+
+  try {
+    if (chrome?.ai?.prompt) {
+      const session = await chrome.ai.prompt.create();
+      const res = await session.prompt(prompt);
+      return res?.output?.trim() || res?.text?.trim() || "";
+    }
+    return ""; // fallback if AI not available
+  } catch (e) {
+    console.error("Smart compare failed", e);
+    return "";
+  }
+}
+
+// ---------- MAIN UI LOGIC ----------
 document.addEventListener("DOMContentLoaded", () => {
   const refreshBtn = document.getElementById("refreshBtn");
   const clearBtn = document.getElementById("clearBtn");
@@ -34,7 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ---------------- Product rendering ----------------
-  function renderTable(products) {
+  async function renderTable(products) {
     if (!products || !products.length) {
       renderNoProducts(
         "No products found. Open product pages (Amazon/Flipkart) and click Refresh."
@@ -42,6 +75,24 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    contentEl.innerHTML = "";
+
+    // --- Smart Compare Section ---
+    if (products.length >= 2) {
+      const compareBox = document.createElement("div");
+      compareBox.className = "smart-compare";
+      compareBox.innerText = "Analyzing product comparison...";
+      contentEl.appendChild(compareBox);
+
+      const summary = await generateSmartCompare(products);
+      if (summary) {
+        compareBox.innerHTML = `<strong>Smart Compare:</strong><br>${summary}`;
+      } else {
+        compareBox.style.display = "none";
+      }
+    }
+
+    // --- Product Cards Grid ---
     const grid = document.createElement("div");
     grid.className = "grid";
 
@@ -92,8 +143,6 @@ document.addEventListener("DOMContentLoaded", () => {
       grid.appendChild(card);
     });
 
-    // render grid
-    contentEl.innerHTML = "";
     contentEl.appendChild(grid);
 
     // summarize each product
@@ -101,12 +150,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const el = document.getElementById(`summary-${idx}`);
       try {
         const summary = await summarizeReviews(p.reviews || [], p.title);
-        el.innerHTML = summary
-          .replace(/\*\*Pros:\*\*/g, "<strong>Pros:</strong><ul>")
-          .replace(/\*\*Cons:\*\*/g, "</ul><strong>Cons:</strong><ul>")
-          .replace(/- /g, "<li>")
-          + "</ul>";
-        } catch (err) {
+        el.innerHTML =
+          summary
+            .replace(/\*\*Pros:\*\*/g, "<strong>Pros:</strong><ul>")
+            .replace(/\*\*Cons:\*\*/g, "</ul><strong>Cons:</strong><ul>")
+            .replace(/- /g, "<li>") + "</ul>";
+      } catch (err) {
         console.error("Summary failed:", err);
         el.innerText = "[summary failed]";
       }
@@ -118,21 +167,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const withPrice = products.filter((p) => parsePrice(p.price) !== null);
     const without = products.filter((p) => parsePrice(p.price) === null);
     withPrice.sort(
-      (a, b) =>
-        (parsePrice(a.price) || 1e12) - (parsePrice(b.price) || 1e12)
+      (a, b) => (parsePrice(a.price) || 1e12) - (parsePrice(b.price) || 1e12)
     );
     return withPrice.concat(without);
   }
 
   function groupSimilar(products) {
-    // placeholder for smarter grouping later
     return products;
   }
 
   // ---------------- Main data flow ----------------
   function loadProducts() {
     setStatus("Loading products...");
-    chrome.runtime.sendMessage({ type: "get-all-products" }, (resp) => {
+    chrome.runtime.sendMessage({ type: "get-all-products" }, async (resp) => {
       const products = resp?.products || [];
       const normalized = products.map((p) => ({
         ...p,
@@ -146,7 +193,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const sorted = relativeSort(normalized);
       const grouped = groupSimilar(sorted);
-      renderTable(grouped);
+      await renderTable(grouped);
       setStatus(`${grouped.length} product(s) found`);
     });
   }
