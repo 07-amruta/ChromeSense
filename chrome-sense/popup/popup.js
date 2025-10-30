@@ -9,7 +9,9 @@ async function generateSmartCompare(products) {
   const context = products
     .map(
       (p, i) =>
-        `Product ${i + 1}: ${p.title}\nPrice: ${p.price}\nRating: ${p.rating}\nTop Reviews:\n${(p.reviews || []).slice(0, 3).join("\n")}`
+        `Product ${i + 1}: ${p.title}\nPrice: ${p.price}\nRating: ${p.rating}\nTop Reviews:\n${(p.reviews || [])
+          .slice(0, 3)
+          .join("\n")}`
     )
     .join("\n\n");
 
@@ -41,11 +43,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const statusEl = document.getElementById("status");
   const contentEl = document.getElementById("content");
 
-  refreshBtn.addEventListener("click", loadProducts);
+  refreshBtn.addEventListener("click", scanAndRender);
   clearBtn.addEventListener("click", clearProducts);
 
-  // initial load
-  loadProducts();
+  // Automatically scan open tabs when popup opens
+  scanAndRender();
 
   // ---------------- Core UI helpers ----------------
   function setStatus(text) {
@@ -61,7 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.runtime.sendMessage({ type: "clear-products" }, () => {
       setStatus("Cleared.");
       renderNoProducts(
-        "No products found. Open product pages (Amazon/Flipkart) and click Refresh."
+        "No products found. Open product pages (Amazon/Flipkart) and re-open this popup."
       );
     });
   }
@@ -70,7 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function renderTable(products) {
     if (!products || !products.length) {
       renderNoProducts(
-        "No products found. Open product pages (Amazon/Flipkart) and click Refresh."
+        "No products found. Open product pages (Amazon/Flipkart) and re-open this popup."
       );
       return;
     }
@@ -150,11 +152,15 @@ document.addEventListener("DOMContentLoaded", () => {
       const el = document.getElementById(`summary-${idx}`);
       try {
         const summary = await summarizeReviews(p.reviews || [], p.title);
-        el.innerHTML =
-          summary
+        const html =
+          (summary || "")
             .replace(/\*\*Pros:\*\*/g, "<strong>Pros:</strong><ul>")
             .replace(/\*\*Cons:\*\*/g, "</ul><strong>Cons:</strong><ul>")
             .replace(/- /g, "<li>") + "</ul>";
+        el.innerHTML =
+          html === "<ul></ul>"
+            ? "No detailed reviews available for analysis."
+            : html;
       } catch (err) {
         console.error("Summary failed:", err);
         el.innerText = "[summary failed]";
@@ -162,7 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ---------------- Sorting and grouping ----------------
+  // ---------------- Sorting ----------------
   function relativeSort(products) {
     const withPrice = products.filter((p) => parsePrice(p.price) !== null);
     const without = products.filter((p) => parsePrice(p.price) === null);
@@ -172,29 +178,36 @@ document.addEventListener("DOMContentLoaded", () => {
     return withPrice.concat(without);
   }
 
-  function groupSimilar(products) {
-    return products;
+  // ---------------- Scan + Render Flow ----------------
+  function scanAndRender() {
+    setStatus("Scanning open tabs...");
+    chrome.runtime.sendMessage({ type: "scan-tabs" }, async (resp) => {
+      const products = resp?.products || [];
+      if (!products.length) {
+        // fallback to cached
+        chrome.runtime.sendMessage({ type: "get-all-products" }, (r2) => {
+          const fallback = r2?.products || [];
+          processAndRender(fallback);
+        });
+        return;
+      }
+      processAndRender(products);
+    });
   }
 
-  // ---------------- Main data flow ----------------
-  function loadProducts() {
-    setStatus("Loading products...");
-    chrome.runtime.sendMessage({ type: "get-all-products" }, async (resp) => {
-      const products = resp?.products || [];
-      const normalized = products.map((p) => ({
-        ...p,
-        priceValue: parsePrice(p.price),
-        shortTitle: p.title
-          ? p.title.length > 80
-            ? p.title.slice(0, 80) + "…"
-            : p.title
-          : "",
-      }));
+  function processAndRender(products) {
+    const normalized = products.map((p) => ({
+      ...p,
+      priceValue: parsePrice(p.price),
+      shortTitle: p.title
+        ? p.title.length > 80
+          ? p.title.slice(0, 80) + "…"
+          : p.title
+        : "",
+    }));
 
-      const sorted = relativeSort(normalized);
-      const grouped = groupSimilar(sorted);
-      await renderTable(grouped);
-      setStatus(`${grouped.length} product(s) found`);
-    });
+    const sorted = relativeSort(normalized);
+    renderTable(sorted);
+    setStatus(`${sorted.length} product(s) found`);
   }
 });

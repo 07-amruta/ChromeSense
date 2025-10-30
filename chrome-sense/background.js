@@ -1,6 +1,7 @@
 // background.js
 const STORE_KEY = "chrome_sense_products";
 
+// ───────────────────────────── INSTALL HANDLER ─────────────────────────────
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.set({ [STORE_KEY]: [] });
   chrome.contextMenus.create({
@@ -35,57 +36,58 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  // 🆕 Scan all open tabs for products
+  // 🆕 Scan all open tabs for product pages
   if (msg.type === "scan-tabs") {
-    scanAllProductTabs(sendResponse);
-    return true; // keep async channel open
+    scanAllProductTabs().then((products) => sendResponse({ products }));
+    return true;
   }
 });
 
 // ───────────────────────────── CORE FUNCTIONS ─────────────────────────────
-async function scanAllProductTabs(sendResponse) {
-  const tabs = await chrome.tabs.query({});
-  const productTabs = tabs.filter(
-    (t) =>
-      t.url.includes("amazon.in") || t.url.includes("flipkart.com")
-  );
+async function scanAllProductTabs() {
+  const tabs = await chrome.tabs.query({ url: ["*://*.amazon.in/*", "*://*.flipkart.com/*"] });
 
-  console.log("🔍 Scanning product tabs:", productTabs.map((t) => t.url));
+  console.log("🔍 Found product tabs:", tabs.map((t) => t.url));
 
-  for (const tab of productTabs) {
+  const injectionPromises = tabs.map(async (tab) => {
     try {
-      if (tab.url.includes("flipkart.com")) {
-        await injectExtractor(tab.id, "content-scripts/flipkart.js");
-      } else if (tab.url.includes("amazon.in")) {
-        await injectExtractor(tab.id, "content-scripts/amazon.js");
-      }
-    } catch (e) {
-      console.warn("Injection failed for tab", tab.id, e);
+      // Wait until tab is completely loaded
+      await waitForTabReady(tab.id);
+
+      const scriptFile = tab.url.includes("flipkart.com")
+        ? "content-scripts/flipkart.js"
+        : "content-scripts/amazon.js";
+
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: [scriptFile],
+      });
+
+      console.log(`✅ Injected ${scriptFile} into ${tab.url}`);
+    } catch (err) {
+      console.warn(`⚠️ Could not inject into ${tab.url}`, err);
     }
-  }
+  });
 
-  // wait for data collection
-  setTimeout(() => {
-    chrome.storage.local.get(STORE_KEY, (res) => {
-      sendResponse({ products: res[STORE_KEY] || [] });
-    });
-  }, 2500);
+  await Promise.allSettled(injectionPromises);
+
+  // Wait for messages from injectors to complete storage writes
+  await new Promise((r) => setTimeout(r, 2500));
+
+  const { [STORE_KEY]: products = [] } = await chrome.storage.local.get(STORE_KEY);
+  console.log("📦 Products after scan:", products);
+  return products;
 }
 
-// Dynamically injects a given content script into a tab
-async function injectExtractor(tabId, file) {
-  try {
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      files: [file],
-    });
-    console.log("✅ Injected:", file, "into tab:", tabId);
-  } catch (e) {
-    console.error("Injection error:", e);
+async function waitForTabReady(tabId) {
+  for (let i = 0; i < 10; i++) {
+    const tab = await chrome.tabs.get(tabId);
+    if (tab.status === "complete") return true;
+    await new Promise((r) => setTimeout(r, 300));
   }
+  return true;
 }
 
-// Save or update products in storage
 async function saveOrUpdateProduct(product) {
   const data = await new Promise((resolve) =>
     chrome.storage.local.get(STORE_KEY, (r) => resolve(r[STORE_KEY] || []))
