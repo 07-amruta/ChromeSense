@@ -17,6 +17,29 @@ const status = document.getElementById("status");
 
 // ==================== INIT ====================
 document.addEventListener("DOMContentLoaded", async () => {
+  // ==================== THEME SWITCHER ====================
+  const themeSwitcher = document.getElementById("checkbox");
+
+  themeSwitcher.addEventListener("change", () => {
+    if (themeSwitcher.checked) {
+      document.body.classList.add("dark-mode");
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.body.classList.remove("dark-mode");
+      document.documentElement.setAttribute('data-theme', 'light');
+      localStorage.setItem("theme", "light");
+    }
+  });
+
+  // Load theme from local storage
+  const savedTheme = localStorage.getItem("theme");
+  if (savedTheme === "dark") {
+    themeSwitcher.checked = true;
+    document.body.classList.add("dark-mode");
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+
   // Check Chrome AI availability
   console.log("🔍 Checking Chrome AI availability...");
   console.log("window.ai:", window.ai);
