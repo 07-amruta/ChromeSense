@@ -296,7 +296,11 @@ async function generateSmartComparison(products) {
 async function handleRefresh() {
   updateStatus("Scanning tabs...", "loading");
   refreshBtn.disabled = true;
-  
+  refreshBtn.innerHTML = `
+    <div class="loading-spinner"></div>
+    Scanning...
+  `;
+
   // Trigger content scripts
   chrome.tabs.query({}, (tabs) => {
     tabs.forEach((tab) => {
@@ -305,31 +309,52 @@ async function handleRefresh() {
       }
     });
   });
-  
+
   // FIXED: Changed timeout from 3000ms to 5000ms
   // This gives content scripts more time to extract and send data
   setTimeout(async () => {
     await loadProducts();
     refreshBtn.disabled = false;
+    refreshBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+      </svg>
+      Scan Tabs
+    `;
   }, 5000);
 }
 
 async function handleClear() {
-  if (!confirm("Clear all products?")) return;
-  
-  chrome.runtime.sendMessage({ type: "clear-all" }, async () => {
+  if (!confirm("Are you sure you want to clear all products?")) return;
+
+  chrome.runtime.sendMessage({ type: "clear-products" }, async () => {
     currentProducts = [];
     smartCompareSection.style.display = "none";
-    showEmptyState();
-    updateStatus("All products cleared", "ready");
+    
+    // Animate out all cards
+    const cards = grid.querySelectorAll('.product-card');
+    cards.forEach((card, index) => {
+      card.style.animation = `fadeOutUp 0.5s ease-out ${index * 0.05}s forwards`;
+    });
+
+    setTimeout(() => {
+      showEmptyState();
+      updateStatus("All products cleared!", "ready");
+    }, 500 + cards.length * 50);
   });
 }
 
 function handleRemoveProduct(index) {
-  const product = currentProducts[index];
-  chrome.runtime.sendMessage({ type: "remove-product", payload: { url: product.url } }, async () => {
-    await loadProducts();
-  });
+  const card = grid.children[index];
+  if (card) {
+    card.style.animation = 'fadeOutUp 0.5s ease-out forwards';
+    setTimeout(() => {
+      const product = currentProducts[index];
+      chrome.runtime.sendMessage({ type: "remove-product", payload: { url: product.url } }, async () => {
+        await loadProducts();
+      });
+    }, 500);
+  }
 }
 
 // ==================== UI HELPERS ====================

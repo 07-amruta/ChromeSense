@@ -132,17 +132,21 @@ Product ${productNum}: ${p.title}
 `;
   }).join("\n");
 
-  const prompt = `You are a smart shopping assistant helping customers compare products.
+  const prompt = `You are a friendly and helpful shopping assistant.
+Your goal is to provide a clear, concise, and visually appealing comparison of the following products.
 
-Compare these ${products.length} products objectively:
-
+Products:
 ${context}
 
-Provide your analysis in this format:
-1. Brief 2-3 sentence comparison highlighting key differences in features, price, and ratings
-2. Clear recommendation stating which product offers the best value and why
+Your analysis should be in two parts:
 
-Keep it concise and consumer-friendly.`;
+**1. Quick Comparison:**
+A short, easy-to-read summary of the key differences. Use bullet points with emojis for each key point (e.g., "💰 Price:", "⭐ Rating:", "🚀 Performance:").
+
+**2. Recommendation:**
+A clear and confident recommendation of the best product for the user and a brief explanation of why. Start with "🏆 Best Choice:".
+
+Make it fun and engaging!`;
 
   try {
     const isAvailable = await checkAIAvailability();
@@ -184,7 +188,7 @@ function formatComparisonResponse(response, products) {
   
   products.forEach((p, i) => {
     const shortTitle = p.title.length > 50 ? p.title.substring(0, 50) + "..." : p.title;
-    const siteIcon = p.site === "amazon" ? "🟠" : "🔵";
+    const siteIcon = p.site === "amazon" ? "🛒" : "🛍️";
     const siteName = p.site === "amazon" ? "Amazon" : "Flipkart";
     const productNum = i + 1;
     
@@ -275,21 +279,34 @@ function generateFallbackSummary(reviews) {
  * Fallback: Basic comparison without AI
  */
 function generateFallbackComparison(products) {
-  const prices = products
-    .map(p => p.price)
-    .filter(p => p && p.includes("₹"))
-    .map(p => parseInt(p.replace(/[₹,]/g, "")));
-  
   let html = '<div class="comparison-grid">';
-  
+  let cheapestProduct = null;
+  let cheapestPrice = Infinity;
+  let mostExpensivePrice = -Infinity;
+
+  for (const p of products) {
+    if (p.price && p.price.includes("₹")) {
+      const price = parseInt(p.price.replace(/[₹,]/g, ""));
+      if (price < cheapestPrice) {
+        cheapestPrice = price;
+        cheapestProduct = p;
+      }
+      if (price > mostExpensivePrice) {
+        mostExpensivePrice = price;
+      }
+    }
+  }
+
   products.forEach((p, i) => {
     const shortTitle = p.title.length > 50 ? p.title.substring(0, 50) + "..." : p.title;
-    const siteIcon = p.site === "amazon" ? "🟠" : "🔵";
+    const siteIcon = p.site === "amazon" ? "🛒" : "🛍️";
     const siteName = p.site === "amazon" ? "Amazon" : "Flipkart";
     const productNum = i + 1;
-    
+    const isRecommended = p === cheapestProduct;
+
     html += `
-      <div class="comparison-product">
+      <div class="comparison-product ${isRecommended ? 'recommended' : ''}">
+        ${isRecommended ? '<div class="recommended-badge">Best Value</div>' : ''}
         <div class="comparison-product-header">
           <span class="product-number">#${productNum}</span>
           <span class="product-site">${siteIcon} ${siteName}</span>
@@ -297,36 +314,35 @@ function generateFallbackComparison(products) {
         <h4 class="comparison-title">${shortTitle}</h4>
         <div class="comparison-details">
           <div class="detail-item">
-            <span class="detail-label">💰 Price</span>
+            <span class="detail-label">Price</span>
             <span class="detail-value price-value">${p.price || "N/A"}</span>
           </div>
           <div class="detail-item">
-            <span class="detail-label">⭐ Rating</span>
+            <span class="detail-label">Rating</span>
             <span class="detail-value">${p.rating || "N/A"}</span>
           </div>
         </div>
       </div>
     `;
   });
-  
+
   html += '</div>';
-  
-  if (prices.length >= 2) {
-    const cheapest = Math.min(...prices);
-    const mostExpensive = Math.max(...prices);
-    const cheapestIndex = products.findIndex(p => p.price && p.price.includes(cheapest.toString()));
-    const cheapestProductNum = cheapestIndex + 1;
-    const savings = mostExpensive - cheapest;
-    
+
+  if (cheapestProduct) {
+    const savings = mostExpensivePrice - cheapestPrice;
     html += `
       <div class="recommendation-box">
-        <div class="recommendation-icon">💡</div>
+        <div class="recommendation-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-star">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+        </div>
         <div class="recommendation-content">
-          <h4>Best Value Recommendation</h4>
-          <p><strong>Product #${cheapestProductNum}</strong> offers the best price at <strong>₹${cheapest.toLocaleString("en-IN")}</strong></p>
-          <p class="savings-text">💰 Save <strong>₹${savings.toLocaleString("en-IN")}</strong> compared to the highest priced option!</p>
-          <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">
-            <em>Using fallback analysis. Enable Chrome AI for AI-powered insights.</em>
+          <h4>Top Pick for Value!</h4>
+          <p>Our analysis shows that <strong>Product #${products.indexOf(cheapestProduct) + 1}</strong> offers the best value at just <strong>₹${cheapestPrice.toLocaleString("en-IN")}</strong>.</p>
+          ${savings > 0 ? `<p class="savings-text">You could save <strong>₹${savings.toLocaleString("en-IN")}</strong> by choosing this option!</p>` : ''}
+          <p class="ai-note">
+            <em>Tip: Enable Chrome AI for personalized insights and smarter recommendations.</em>
           </p>
         </div>
       </div>
@@ -334,17 +350,29 @@ function generateFallbackComparison(products) {
   } else {
     html += `
       <div class="recommendation-box">
-        <div class="recommendation-icon">💡</div>
+        <div class="recommendation-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-lightbulb">
+            <path d="M12 18a6 6 0 0 0 0-12c-3.31 0-6 2.69-6 6s2.69 6 6 6z"></path>
+            <path d="M12 22v-4"></path>
+            <path d="M12 2L12 6"></path>
+            <path d="M22 12h-4"></path>
+            <path d="M2 12h4"></path>
+            <path d="M19.78 4.22l-2.83 2.83"></path>
+            <path d="M4.22 19.78l2.83-2.83"></path>
+            <path d="M4.22 4.22l2.83 2.83"></path>
+            <path d="M19.78 19.78l-2.83-2.83"></path>
+          </svg>
+        </div>
         <div class="recommendation-content">
-          <h4>Comparison Insight</h4>
-          <p>Compare the ratings, prices, and features above to find the best value for your needs.</p>
-          <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">
-            <em>Using fallback analysis. Enable Chrome AI for AI-powered insights.</em>
+          <h4>Compare and Decide</h4>
+          <p>We couldn't pinpoint a single best value. Review the details above to find the perfect product for you.</p>
+          <p class="ai-note">
+            <em>Tip: Enable Chrome AI for a detailed, AI-powered comparison.</em>
           </p>
         </div>
       </div>
     `;
   }
-  
+
   return html;
 }
