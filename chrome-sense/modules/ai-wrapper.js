@@ -60,28 +60,22 @@ async function createPromptSession() {
  */
 export async function summarizeReviews(reviews = [], productTitle = "") {
   if (!reviews || reviews.length === 0) {
-    return "No detailed reviews available for analysis.";
+    return JSON.stringify({ pros: [], cons: ["No detailed reviews available for analysis."] });
   }
 
   const joined = reviews.slice(0, 10).join("\n\n");
   
-  const prompt = `You are an expert product analyst helping customers make informed decisions.
+  const prompt = `Analyze the following customer reviews for the product "${productTitle}".
+Extract the main pros and cons.
+Return a JSON object with two keys: "pros" and "cons".
+Each key should have an array of strings, with each string being a concise point.
+Limit each point to under 15 words.
 
-Product: ${productTitle}
-
-Analyze these customer reviews and provide a balanced summary in this EXACT format:
-
-**Pros:**
-- [Key advantage 1]
-- [Key advantage 2]
-- [Key advantage 3]
-
-**Cons:**
-- [Main complaint 1]
-- [Main complaint 2]
-- [Main complaint 3]
-
-Keep each point under 15 words. Focus on the most frequently mentioned aspects.
+Example output:
+{
+  "pros": ["Easy to use", "Good battery life"],
+  "cons": ["A bit expensive", "Screen could be brighter"]
+}
 
 Customer Reviews:
 ${joined}
@@ -98,7 +92,7 @@ ${joined}
         console.log("✅ Using Chrome Prompt API for summarization");
         const response = await session.prompt(prompt);
         await session.destroy();
-        return response || "Unable to generate summary.";
+        return response || JSON.stringify({ pros: [], cons: ["Unable to generate summary."] });
       }
     }
     
@@ -268,7 +262,11 @@ function generateFallbackSummary(reviews) {
   if (pros.length === 0) pros.push("- Positive aspects noted in reviews");
   if (cons.length === 0) cons.push("- Some areas for improvement mentioned");
   
-  return `**Pros:**\n${pros.join("\n")}\n\n**Cons:**\n${cons.join("\n")}\n\n*Note: Using fallback analysis. Enable Chrome AI for better insights.*`;
+  return JSON.stringify({
+    pros,
+    cons,
+    note: "Using fallback analysis. Enable Chrome AI for better insights."
+  });
 }
 
 /**

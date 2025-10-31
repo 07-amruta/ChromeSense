@@ -163,13 +163,11 @@ async function generateSummary(product, index) {
   const contentDiv = summaryContainer.querySelector(".summary-content");
   
   try {
-    const summary = await summarizeReviews(product.reviews || [], product.title);
-    
-    // Parse pros and cons
-    const parsed = parseSummary(summary);
+    const summaryJson = await summarizeReviews(product.reviews || [], product.title);
+    const parsed = parseJsonSummary(summaryJson);
     
     contentDiv.innerHTML = `
-      ${parsed.pros ? `
+      ${parsed.pros && parsed.pros.length > 0 ? `
         <div class="summary-section pros">
           <strong>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -181,7 +179,7 @@ async function generateSummary(product, index) {
         </div>
       ` : ""}
       
-      ${parsed.cons ? `
+      ${parsed.cons && parsed.cons.length > 0 ? `
         <div class="summary-section cons">
           <strong>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -193,7 +191,8 @@ async function generateSummary(product, index) {
         </div>
       ` : ""}
       
-      ${!parsed.pros && !parsed.cons ? `<p style="color: var(--text-muted);">${summary}</p>` : ""}
+      ${(!parsed.pros || parsed.pros.length === 0) && (!parsed.cons || parsed.cons.length === 0) ? `<p style="color: var(--text-muted);">Could not extract pros and cons.</p>` : ""}
+      ${parsed.note ? `<p style="color: var(--text-muted); font-size: 12px; margin-top: 8px;"><em>${parsed.note}</em></p>` : ""}
     `;
     
     // Hide spinner
@@ -207,28 +206,19 @@ async function generateSummary(product, index) {
 }
 
 // ==================== PARSE SUMMARY ====================
-function parseSummary(summary) {
-  const result = { pros: null, cons: null };
-  
-  // Split by Pros/Cons headers
-  const prosMatch = summary.match(/\*\*Pros:\*\*\s*([\s\S]*?)(?=\*\*Cons:\*\*|$)/i);
-  const consMatch = summary.match(/\*\*Cons:\*\*\s*([\s\S]*?)$/i);
-  
-  if (prosMatch) {
-    result.pros = prosMatch[1]
-      .split(/[-•]\s+/)
-      .map(item => item.trim())
-      .filter(item => item.length > 10 && item.length < 200);
+function parseJsonSummary(jsonString) {
+  try {
+    const startIndex = jsonString.indexOf('{');
+    const endIndex = jsonString.lastIndexOf('}');
+    if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+      const jsonPart = jsonString.substring(startIndex, endIndex + 1);
+      return JSON.parse(jsonPart);
+    }
+    return JSON.parse(jsonString);
+  } catch (error) {
+    console.error("Failed to parse summary JSON:", error, "\nJSON string:", jsonString);
+    return { pros: null, cons: null };
   }
-  
-  if (consMatch) {
-    result.cons = consMatch[1]
-      .split(/[-•]\s+/)
-      .map(item => item.trim())
-      .filter(item => item.length > 10 && item.length < 200);
-  }
-  
-  return result;
 }
 
 // ==================== SMART COMPARISON ====================

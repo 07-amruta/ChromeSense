@@ -11,8 +11,9 @@
     "contextMenus"
   ],
   "host_permissions": [
-    "*://*.amazon.in/*",
-    "*://*.flipkart.com/*"
+    "*://*.amazon.in/*/dp/*",
+    "*://*.amazon.in/gp/product/*",
+    "*://*.flipkart.com/*p/"
   ],
   "background": {
     "service_worker": "background.js"
@@ -33,12 +34,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://*.amazon.in/*"],
+      "matches": ["*://*.amazon.in/*/dp/*", "*://*.amazon.in/gp/product/*"],
       "js": ["content-scripts/amazon.js"],
       "run_at": "document_idle"
     },
     {
-      "matches": ["*://*.flipkart.com/*"],
+      "matches": ["*://*.flipkart.com/*p/"],
       "js": ["content-scripts/flipkart.js"],
       "run_at": "document_idle"
     }

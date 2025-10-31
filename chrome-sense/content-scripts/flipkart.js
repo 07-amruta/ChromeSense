@@ -46,7 +46,9 @@
       "div._16Jk6d",
       "div._1vC4OE._3qQ9m1",
       "div._25b18c div",
-      "div[class*='_30jeq3']"
+      "div[class*='_30jeq3']",
+      "._1vC4OE",
+      "._3qQ9m1"
     ];
 
     for (let i = 0; i < priceSelectors.length; i++) {
@@ -60,14 +62,13 @@
 
     if (!price) {
       console.log("⚠️ Trying fallback price detection...");
-      const allDivs = document.querySelectorAll("div");
-      for (let div of allDivs) {
-        const text = div.innerText;
-        if (text && text.match(/^₹[\d,]+$/) && text.length < 50) {
-          price = text.trim();
-          console.log("✅ Price found via fallback");
-          break;
-        }
+      const allText = document.body.innerText;
+      const priceRegex = /₹[\d,]+(?!\d)/g;
+      const matches = allText.match(priceRegex);
+      if (matches) {
+        // Find the most likely price
+        price = matches[0];
+        console.log("✅ Price found via fallback");
       }
     }
 
@@ -168,7 +169,7 @@
 
   function getReviews() {
     const reviews = [];
-    const elements = document.querySelectorAll("div.t-ZTKy, div._6K-7Co, div.qwjRop, div[class*='t-ZTKy']");
+    const elements = document.querySelectorAll(".t-ZTKy, ._6K-7Co, .qwjRop, div[class*='-JOpS'], .ZmyHeo");
     
     for (let i = 0; i < elements.length; i++) {
       const text = elements[i].innerText;

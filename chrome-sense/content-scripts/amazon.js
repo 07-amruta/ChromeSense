@@ -8,10 +8,34 @@
 
       // price may vary in selector
       let price = null;
-      const priceSelectors = ['#priceblock_ourprice', '#priceblock_dealprice', '.a-price .a-offscreen', '#priceblock_saleprice'];
+      const priceSelectors = [
+        '.a-price-whole',
+        '.a-price .a-offscreen',
+        'span[data-a-size="xl"] span.a-offscreen',
+        '.apexPriceToPay .a-offscreen',
+        '#corePrice_feature_div .a-offscreen',
+        '#price',
+        '#priceblock_ourprice',
+        '#priceblock_dealprice',
+        '#priceblock_saleprice'
+      ];
       for (const sel of priceSelectors) {
         const el = document.querySelector(sel);
-        if (el && el.innerText) { price = el.innerText.trim(); break; }
+        if (el && el.innerText) {
+          price = el.innerText.trim();
+          break;
+        }
+      }
+
+      // Fallback price detection
+      if (!price) {
+        const allText = document.body.innerText;
+        const priceRegex = /[₹$€£]\s*[\d,]+(?:\.\d{2})?/g;
+        const matches = allText.match(priceRegex);
+        if (matches) {
+          // Find the most likely price (e.g., one that appears frequently or near the product title)
+          price = matches[0];
+        }
       }
 
       // image
@@ -21,11 +45,11 @@
       const rating = document.querySelector('#acrPopover')?.getAttribute('title') || document.querySelector('.a-icon-alt')?.innerText || null;
 
       // reviews - try several selectors
-      let reviewEls = Array.from(document.querySelectorAll('.review-text-content, .a-expander-content, .review-data')) || [];
+      let reviewEls = Array.from(document.querySelectorAll('[data-hook="review-body"], .review-text-content, [data-hook="review-collapsed"]')) || [];
       if (!reviewEls.length) {
         reviewEls = Array.from(document.querySelectorAll('.review .review-text, .review-text'));
       }
-      const reviews = reviewEls.slice(0, 6).map(r => r.innerText.trim()).filter(Boolean);
+      const reviews = reviewEls.slice(0, 10).map(r => r.innerText.trim()).filter(Boolean);
 
       const product = {
         site: 'amazon',
