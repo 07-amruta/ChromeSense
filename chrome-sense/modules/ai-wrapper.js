@@ -92,7 +92,7 @@ ${joined}
         console.log("✅ Using Chrome Prompt API for summarization");
         const response = await session.prompt(prompt);
         await session.destroy();
-        return response || JSON.stringify({ pros: [], cons: ["Unable to generate summary."] });
+        return response || JSON.stringify({ pros: [], cons: [], note: "Unable to generate summary." });
       }
     }
     
