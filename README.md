@@ -1,109 +1,97 @@
+
 # ChromeSense — AI Product Comparison Extension
 
-> Smart, privacy-first product comparison for Amazon & Flipkart using Chrome's local AI (Gemini Nano) with a robust fallback.
+**Smart, privacy-first product comparison for Amazon and Flipkart using on-device AI with a robust local fallback.**
 
-**Built for Google Chrome AI Challenge 2025** | Uses Gemini Nano when available
-
----
-
-## Quick overview
-
-ChromeSense scans open product tabs (Amazon / Flipkart), extracts product details, and shows concise comparisons and recommendations. It runs fully locally: either on-device with Gemini Nano (when available) or with a keyword-based fallback that preserves privacy.
-
-Solves the product comparison problem by consolidating specs, prices, and reviews from open tabs into a clear, side‑by‑side view, powered locally by Gemini Nano or a private fallback.
+**Built for the Google Chrome AI Challenge 2025**
 
 ---
 
-## **How to Run**
+## Overview
 
-### **Step 1 — Load the Extension**
+**ChromeSense** scans open product tabs (Amazon / Flipkart), extracts product details, and generates clear side-by-side comparisons and recommendations.
 
-1. Open `chrome://extensions` in your browser  
-2. Turn on **Developer mode** (toggle at the top-right)  
-3. Click **Load unpacked** and select the extension folder (`chrome-sense/` directory)
+All processing runs locally — either using Chrome’s built-in **Gemini Nano** (when available) or a **keyword-based fallback** that ensures complete privacy.
 
----
-
-### **Step 2 — Run ChromeSense**
-
-1. Open product pages (Amazon / Flipkart) in separate tabs  
-2. Click the **ChromeSense icon** in the toolbar  
-3. Click **Scan Tabs** to analyze all open product tabs  
-4. View AI summaries and comparisons inside the popup  
+ChromeSense simplifies online shopping by consolidating specifications, prices, and reviews into one concise, private, and efficient interface.
 
 ---
 
-### **Notes**
+## Installation and Usage
 
-- The extension runs fully **locally** — no data is sent to external servers.  
-- When Gemini Nano is supported on your Chrome build, it’s used automatically.  
-- If it’s not available, the **fallback analyzer** activates for consistent functionality.  
+ChromeSense runs in any version of Chrome. Gemini Nano (on-device AI) is automatically used when available; otherwise, the extension switches to its local fallback analyzer.
 
----
+### Installation Steps
 
-## How to add ChromeSense to Chrome (summary)
+1. Open `chrome://extensions` in Chrome.  
+2. Enable **Developer mode** (toggle in the top-right corner).  
+3. Click **Load unpacked** and select the `chrome-sense/` folder.  
+4. The ChromeSense icon will appear in your toolbar — pin it for quick access.
 
-1. Open `chrome://extensions` in your browser
-2. Enable **Developer mode** (toggle at top-right)
-3. Click **Load unpacked** and point to the `chrome-sense/` folder in this repo
-4. The extension icon will appear in the toolbar — pin it for easy access
+### Running ChromeSense
 
-To run: open the product tabs you want compared, click the extension icon, then click **Scan Tabs**.
-
-Tip: When scanning many tabs, click each product tab once (see Areas for improvement) to ensure the extension captures all product details reliably.
-
----
-
-## AI vs Fallback mode — what to expect
-
-- Gemini Nano (on-device AI)
-  - When available and loaded, provides rich, context-aware summaries and better comparisons.
-  - Runs fully on device (no external network requests).
-
-- Fallback (keyword-based analyzer)
-  - Used when Gemini Nano is unavailable or fails to load.
-  - Produces reliable but more limited output (price, ratings, key specs extracted via heuristics).
-
-Current status:
-  - At the moment, some users and builds have reported Gemini Nano failing to load. When that happens ChromeSense automatically uses the fallback analyzer.
-  - The fallback works and preserves privacy, but it does not provide as much contextual or generative insight as Gemini Nano. Improving Gemini Nano loading reliability and parity in output is an active area of development for this project.
+1. Open product pages (Amazon / Flipkart) in separate tabs.  
+2. Click the **ChromeSense** toolbar icon.  
+3. Click **Scan Tabs** to analyze all open product tabs.  
+4. View product summaries and comparisons directly in the popup window.
 
 ---
 
-## Areas of improvement
+## AI and Fallback Modes
 
-1. Gemini Nano reliability
-   - Improve detection / model download and handling so the on-device model loads consistently across systems.
+ChromeSense automatically selects the best available mode based on your Chrome setup.
 
-2. Tab scanning reliability
-   - Currently, users may need to click once on all product tabs to ensure every product page is fully scanned. Improve background tab scraping so a full scan works without manual tab activation.
+### Gemini Nano (On-Device AI)
+- Provides detailed, context-aware summaries and comparisons.  
+- Runs fully on-device — no external requests or data sharing.  
+- Availability depends on your Chrome build and operating system.
 
-3. (Future) UI polish and richer comparisons
-   - Add richer comparison visuals and more configurable comparison criteria.
+### Keyword-Based Fallback Analyzer
+- Automatically used if Gemini Nano is unavailable.  
+- Extracts product specifications, ratings, and prices using efficient local heuristics.  
+- Maintains complete privacy — no data leaves your device.
 
----
-
-## � Technical Stack
-
-- **Chrome Prompt API** — Gemini Nano integration when available
-- **Manifest V3** — Chrome extension architecture
-- **JavaScript (ES6+)** — Async/await and modern JS patterns
-- **Zero external APIs** — All processing runs locally
+Both modes operate entirely locally, ensuring privacy and reliability.
 
 ---
 
-## 🎯 Hackathon Compliance Checklist
+## Notes and Troubleshooting
 
-- ✅ Implements Chrome Prompt API
-- ✅ Works with or without built-in AI
-- ✅ No external dependencies required
-- ✅ 100% privacy-focused (local processing only)
-- ✅ Graceful fallback system
+- Ensure each product tab is **fully loaded** before scanning. Clicking each tab once improves accuracy.  
+- If Gemini Nano is unsupported on your system, ChromeSense will automatically use the fallback mode.  
+- When Chrome adds full Gemini Nano support for your system, ChromeSense will use it without requiring reinstallation.
 
 ---
 
-## 📄 License
+## Areas for Improvement
 
-MIT License — free to use and modify
+1. **Gemini Nano reliability** – Improve detection and model handling for consistent AI performance.  
+2. **Background tab scanning** – Enable reliable analysis without requiring manual tab activation.  
+3. **UI and comparisons** – Add richer visual comparisons and customizable comparison criteria.
+
+---
+
+## Technical Stack
+
+- **Chrome Prompt API** (Gemini Nano integration)  
+- **Manifest V3** (Chrome Extension architecture)  
+- **JavaScript (ES6+)**  
+- **Zero external APIs** — all processing is local
+
+---
+
+## Hackathon Compliance
+
+- Implements Chrome Prompt API  
+- Works with or without built-in AI  
+- No external dependencies  
+- Fully privacy-preserving (local only)  
+- Includes a robust fallback system  
+
+---
+
+## License
+
+MIT License — free to use and modify.
 
 ---
