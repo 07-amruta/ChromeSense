@@ -1,19 +1,26 @@
-
 # ChromeSense — AI Product Comparison Extension
 
-**Smart, privacy-first product comparison for Amazon and Flipkart using on-device AI with a robust local fallback.**
-
+**Smart, privacy-first product comparison for Amazon and Flipkart using on-device AI with a robust local fallback.**  
 **Built for the Google Chrome AI Challenge 2025**
 
 ---
 
 ## Overview
 
-**ChromeSense** scans open product tabs (Amazon / Flipkart), extracts product details, and generates clear side-by-side comparisons and recommendations.
+Online shoppers often open multiple Amazon or Flipkart tabs to compare products manually.  
+**ChromeSense** automates that process — it scans open product pages, extracts specifications, prices, and reviews, and generates clear side-by-side comparisons directly in your browser.
 
-All processing runs locally — either using Chrome’s built-in **Gemini Nano** (when available) or a **keyword-based fallback** that ensures complete privacy.
+All analysis happens locally: using Chrome’s on-device **Gemini Nano** (when available) or a lightweight, privacy-preserving fallback when it’s not.
 
-ChromeSense simplifies online shopping by consolidating specifications, prices, and reviews into one concise, private, and efficient interface.
+---
+
+### Key Features
+
+- Local AI-powered product comparisons using Chrome’s on-device Gemini Nano  
+- Private, offline fallback mode when AI is unavailable  
+- Works seamlessly with Amazon and Flipkart  
+- One-click tab scanning and instant summaries  
+- 100% local processing — no external APIs or data collection  
 
 ---
 
@@ -41,17 +48,12 @@ ChromeSense runs in any version of Chrome. Gemini Nano (on-device AI) is automat
 
 ChromeSense automatically selects the best available mode based on your Chrome setup.
 
-### Gemini Nano (On-Device AI)
-- Provides detailed, context-aware summaries and comparisons.  
-- Runs fully on-device — no external requests or data sharing.  
-- Availability depends on your Chrome build and operating system.
+| Mode | Description | Processing | Requirements |
+|------|--------------|-------------|---------------|
+| **Gemini Nano (AI)** | Context-aware summaries and detailed comparisons | On-device (Gemini Nano) | Chrome with AI support |
+| **Fallback Analyzer** | Extracts specs, prices, and ratings using local heuristics | Local JavaScript | Works in all Chrome versions |
 
-### Keyword-Based Fallback Analyzer
-- Automatically used if Gemini Nano is unavailable.  
-- Extracts product specifications, ratings, and prices using efficient local heuristics.  
-- Maintains complete privacy — no data leaves your device.
-
-Both modes operate entirely locally, ensuring privacy and reliability.
+Both modes operate entirely on-device to ensure privacy and reliability.
 
 ---
 
@@ -93,5 +95,3 @@ Both modes operate entirely locally, ensuring privacy and reliability.
 ## License
 
 MIT License — free to use and modify.
-
----
