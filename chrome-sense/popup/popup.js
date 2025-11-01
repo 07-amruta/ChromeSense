@@ -22,12 +22,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   themeSwitcher.addEventListener("change", () => {
     if (themeSwitcher.checked) {
-      document.body.classList.add("dark-mode");
-      document.documentElement.setAttribute('data-theme', 'dark');
+      document.body.classList.add("dark");
       localStorage.setItem("theme", "dark");
     } else {
-      document.body.classList.remove("dark-mode");
-      document.documentElement.setAttribute('data-theme', 'light');
+      document.body.classList.remove("dark");
       localStorage.setItem("theme", "light");
     }
   });
@@ -36,8 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const savedTheme = localStorage.getItem("theme");
   if (savedTheme === "dark") {
     themeSwitcher.checked = true;
-    document.body.classList.add("dark-mode");
-    document.documentElement.setAttribute('data-theme', 'dark');
+    document.body.classList.add("dark");
   }
 
   // Check Chrome AI availability

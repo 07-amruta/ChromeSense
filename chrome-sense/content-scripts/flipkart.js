@@ -8,7 +8,6 @@
     });
   }
 
-  // Extract data immediately - don't wait for user
   async function scrollPage() {
     try {
       console.log("📜 Starting page scroll...");
@@ -76,55 +75,121 @@
   }
 
   function getImage() {
-    let image = null;
+    console.log("🔍 [Attempt 1] Checking img[src] attributes directly...");
     
-    const imageSelectors = [
-      "img._396cs4",
-      "img._2r_T1I", 
-      "img._53J4C-",
-      "div._1AtVbE img",
-      "div._3kidJX img",
-      "img[class*='_396cs4']",
-      "div[class*='_1AtVbE'] img"
-    ];
-
-    for (let i = 0; i < imageSelectors.length; i++) {
-      const el = document.querySelector(imageSelectors[i]);
-      if (el && el.src && !el.src.includes("placeholder") && !el.src.includes("data:image")) {
-        image = el.src;
-        console.log("✅ Image found");
-        break;
+    // Get ALL images and log them for debugging
+    const allImages = Array.from(document.querySelectorAll("img"));
+    console.log(`📊 Total images on page: ${allImages.length}`);
+    
+    // Log first 10 images for debugging
+    allImages.slice(0, 10).forEach((img, idx) => {
+      console.log(`Image ${idx}: src=${img.src?.substring(0, 100) || 'NO SRC'}, class=${img.className}, alt=${img.alt}`);
+    });
+    
+    // Try to find image from img tag with src
+    for (let img of allImages) {
+      if (!img.src) continue;
+      
+      // Skip very small images
+      const width = img.width || img.naturalWidth || 0;
+      const height = img.height || img.naturalHeight || 0;
+      if (width < 100 && height < 100) continue;
+      
+      // Skip placeholder and data URLs
+      if (img.src.startsWith("data:") || 
+          img.src.includes("placeholder") || 
+          img.src.includes("empty")) continue;
+      
+      // Prefer Flipkart CDN images
+      if (img.src.includes("rukminim") || 
+          img.src.includes("flipkart") ||
+          img.src.includes("cdn")) {
+        console.log(`✅ Image found: ${img.src.substring(0, 100)}`);
+        return cleanImageUrl(img.src);
       }
     }
 
-    if (!image) {
-      console.log("⚠️ Trying fallback image detection...");
-      const allImages = document.querySelectorAll("img");
-      let largestImage = null;
-      let maxSize = 0;
-
-      for (let img of allImages) {
-        if (img.src && 
-            img.src.includes("rukminim") && 
-            !img.src.includes("placeholder") &&
-            img.naturalWidth > 100 && 
-            img.naturalHeight > 100) {
-          const size = img.naturalWidth * img.naturalHeight;
-          if (size > maxSize) {
-            maxSize = size;
-            largestImage = img.src;
-          }
+    console.log("🔍 [Attempt 2] Searching in common containers...");
+    
+    // Try specific containers
+    const containerIds = ["productImage", "landingImage", "main_container"];
+    for (let id of containerIds) {
+      const container = document.getElementById(id);
+      if (container) {
+        const img = container.querySelector("img");
+        if (img?.src) {
+          console.log(`✅ Image found in container #${id}`);
+          return cleanImageUrl(img.src);
         }
       }
-      
-      if (largestImage) {
-        image = largestImage;
-        console.log("✅ Image found via fallback");
+    }
+
+    console.log("🔍 [Attempt 3] Checking for image in shadow DOM...");
+    
+    // Try shadow DOM if available
+    for (let el of document.querySelectorAll("*")) {
+      if (el.shadowRoot) {
+        const img = el.shadowRoot.querySelector("img[src*='rukminim'], img[src*='cdn']");
+        if (img?.src) {
+          console.log("✅ Image found in shadow DOM");
+          return cleanImageUrl(img.src);
+        }
       }
     }
 
-    console.log("🖼️ Image extracted");
-    return image;
+    console.log("🔍 [Attempt 4] Extracting from window object...");
+    
+    // Try to extract image URL from window.__INITIAL_STATE__ or similar
+    if (window.__INITIAL_STATE__) {
+      try {
+        const state = JSON.stringify(window.__INITIAL_STATE__);
+        const matches = state.match(/"url":"([^"]*rukminim[^"]*)"/g);
+        if (matches && matches.length > 0) {
+          const url = matches[0].match(/"url":"([^"]*)"/)[1];
+          if (url) {
+            console.log("✅ Image found in window state");
+            return cleanImageUrl(url);
+          }
+        }
+      } catch (e) {
+        console.log("⚠️ Could not parse window state:", e.message);
+      }
+    }
+
+    console.log("🔍 [Attempt 5] Checking all img tags regardless of visibility...");
+    
+    // Last resort: any img with a URL longer than 50 chars
+    for (let img of allImages) {
+      if (img.src && img.src.length > 50 && !img.src.startsWith("data:")) {
+        console.log(`✅ Image found (fallback): ${img.src.substring(0, 100)}`);
+        return cleanImageUrl(img.src);
+      }
+    }
+
+    console.log("⚠️ No image found after all attempts");
+    return null;
+  }
+
+  function cleanImageUrl(url) {
+    if (!url) return null;
+    
+    // Ensure HTTPS
+    if (url.startsWith("http://")) {
+      url = url.replace("http://", "https://");
+    }
+    
+    // Remove query parameters (keep the base URL)
+    if (url.includes("?")) {
+      url = url.split("?")[0];
+    }
+    
+    // Add quality parameter for better image
+    if (!url.includes("?")) {
+      url += "?q=70";
+    }
+    
+    console.log("🖼️ Cleaned image URL:", url.substring(0, 100));
+    return url;
   }
 
   function getRating() {
@@ -218,6 +283,7 @@
       };
 
       console.log("📦 Product data extracted successfully");
+      console.log("🖼️ Final image URL:", image ? image.substring(0, 100) : "NOT FOUND");
 
       let retries = 0;
       const sendMessage = () => {
@@ -247,17 +313,24 @@
   async function init() {
     try {
       console.log("🚀 Initializing Flipkart extractor...");
-      await wait(1000);
+      await wait(2000); // Wait longer for images to load
       await scrollPage();
-      await wait(500);
+      await wait(2000); // Wait longer after scroll
       extractData();
+      
+      // Retry after additional wait
+      setTimeout(() => {
+        console.log("🔄 Retrying extraction after 3s...");
+        extractData();
+      }, 3000);
+      
       console.log("✅ Flipkart extractor initialization complete");
     } catch (error) {
       console.error("❌ Initialization error:", error);
     }
   }
 
-  // Start immediately - don't wait for user interaction
+  // Start immediately
   if (document.readyState === "complete" || document.readyState === "interactive") {
     console.log("📄 Document already ready, starting immediately");
     init();
@@ -267,7 +340,7 @@
     window.addEventListener("load", init);
   }
   
-  // Also run on tab visibility change (when user switches tabs)
+  // Run on tab visibility
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
       console.log("👁️ Tab became visible, re-extracting data...");
