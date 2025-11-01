@@ -360,12 +360,10 @@ function showEmptyState() {
   emptyState.style.display = "block";
   smartCompareSection.style.display = "none";
 }
-
 function hideEmptyState() {
   grid.style.display = "grid";
   emptyState.style.display = "none";
 }
-
 function updateStatus(message, type = "ready") {
   status.querySelector("span").textContent = message;
   status.className = `status-indicator ${type}`;
