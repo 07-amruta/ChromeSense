@@ -14,63 +14,30 @@ Solves the product comparison problem by consolidating specs, prices, and review
 
 ---
 
-## How to run (two options)
+## **How to Run**
 
-Choose one of the following depending on whether you want the on-device Gemini Nano experience or a simpler, compatible setup.
+### **Step 1 — Load the Extension**
 
-### Option 1 — Chrome Dev (recommended for Gemini Nano)
+1. Open `chrome://extensions` in your browser  
+2. Turn on **Developer mode** (toggle at the top-right)  
+3. Click **Load unpacked** and select the extension folder (`chrome-sense/` directory)
 
-Best for the full AI experience (Gemini Nano)
+---
 
-1. Install Chrome Dev
-   - Download from: https://www.google.com/chrome/dev/
+### **Step 2 — Run ChromeSense**
 
-2. Enable the experimental AI features
-   - Open `chrome://flags`
-   - Enable these flags:
-     - `prompt-api-for-gemini-nano` → Enabled
-     - `optimization-guide-on-device-model` → Enabled BypassPerfRequirement
-     - `summarization-api-for-gemini-nano` → Enabled
-   - Relaunch the browser
+1. Open product pages (Amazon / Flipkart) in separate tabs  
+2. Click the **ChromeSense icon** in the toolbar  
+3. Click **Scan Tabs** to analyze all open product tabs  
+4. View AI summaries and comparisons inside the popup  
 
-3. (Optional) Trigger model download
-   - Open `chrome://components`
-   - Find **"Optimization Guide On Device Model"** and click **Check for update**
-   - Download can take several minutes and ~1–1.5 GB disk space
+---
 
-4. Load the extension
-   - Open `chrome://extensions`
-   - Turn on **Developer mode**
-   - Click **Load unpacked** and select the extension folder (the `chrome-sense/` directory)
+### **Notes**
 
-5. Run ChromeSense
-   - Open product pages (Amazon / Flipkart) in separate tabs
-   - Click the ChromeSense icon in the toolbar
-   - Click **Scan Tabs** to scan all open product tabs
-   - View AI summaries and comparisons inside the popup
-
-Notes and troubleshooting for this mode:
-   - Gemini Nano is a platform feature and availability varies by Chrome build and OS.
-   - If Gemini Nano is not yet available on your device or fails to load, the extension falls back to the local keyword-based analyzer (see AI vs Fallback below).
-
-### Option 2 — Regular Chrome (fallback mode)
-
-Use this if you want a simple setup or cannot run Chrome Dev.
-
-1. Load the extension
-   - Open `chrome://extensions`
-   - Turn on **Developer mode**
-   - Click **Load unpacked** and select the extension folder (the `chrome-sense/` directory)
-
-2. Run ChromeSense
-   - Open product pages (Amazon / Flipkart) in separate tabs
-   - Click the ChromeSense icon in the toolbar
-   - Click **Scan Tabs** to analyze opened tabs
-   - View results inside the popup (keyword-based analysis)
-
-Notes:
-   - This mode does not require Gemini Nano or any special flags.
-   - The extension remains fully local and privacy-preserving.
+- The extension runs fully **locally** — no data is sent to external servers.  
+- When Gemini Nano is supported on your Chrome build, it’s used automatically.  
+- If it’s not available, the **fallback analyzer** activates for consistent functionality.  
 
 ---
 
